@@ -3,7 +3,6 @@
 "use strict";
 
 const path = require("path");
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const LwcWebpackPlugin = require("lwc-webpack-plugin");
 
 //@ts-check
@@ -49,4 +48,18 @@ const extensionConfig = {
   // @ts-ignore
   plugins: [new LwcWebpackPlugin()],
 };
-module.exports = [extensionConfig];
+
+const indexConfig = {
+  entry: {
+    index: "./src/index.ts",
+  },
+  resolve: {
+    extensions: [".ts", ".js"],
+  },
+  output: {
+    path: path.resolve(__dirname, "dist"),
+    filename: "index.js",
+  },
+};
+
+module.exports = [extensionConfig, indexConfig];
