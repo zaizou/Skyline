@@ -31,10 +31,6 @@ function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri) {
         <title>Cat Coding</title>
       </head>
       <body>
-        <p>Hello there!</p>
-        <p>scriptUri : ${scriptUri}</p>
-        <p>extensionUri : ${extensionUri}</p>
-        <h1 id="lines-of-code-counter">0</h1>
         <script src="${scriptUri}">
         </script>
       </body>

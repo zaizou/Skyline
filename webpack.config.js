@@ -45,8 +45,6 @@ const extensionConfig = {
   infrastructureLogging: {
     level: "log", // enables logging required for problem matchers
   },
-  // @ts-ignore
-  plugins: [new LwcWebpackPlugin()],
 };
 
 const indexConfig = {
@@ -60,6 +58,8 @@ const indexConfig = {
     path: path.resolve(__dirname, "dist"),
     filename: "index.js",
   },
+  // @ts-ignore
+  plugins: [new LwcWebpackPlugin()],
 };
 
 module.exports = [extensionConfig, indexConfig];
