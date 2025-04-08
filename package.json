@@ -15,7 +15,7 @@
     "commands": [
       {
         "command": "lwc-dev.helloWorld",
-        "title": "Hello World"
+        "title": "LWC Extension"
       }
     ]
   },

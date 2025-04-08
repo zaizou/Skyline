@@ -58,10 +58,10 @@ const indexConfig = {
     path: path.resolve(__dirname, "dist"),
     filename: "index.js"
   },
+  mode: "development",
   plugins: [
     // @ts-ignore
     new LwcWebpackPlugin(),
-    // Add this _after_ LwcWebpackPlugin:
     {
       apply(compiler) {
         compiler.options.module.rules.push({
