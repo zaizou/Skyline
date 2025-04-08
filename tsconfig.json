@@ -3,6 +3,7 @@
     "module": "commonjs",
     "target": "ESNext",
     "lib": ["ES2020", "dom"],
+    "experimentalDecorators": false,
     "sourceMap": true,
     "rootDir": "src",
     "strict": true,

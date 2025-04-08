@@ -1,3 +1,4 @@
+import { execSync } from "child_process";
 import * as vscode from "vscode";
 
 export function activate(context: vscode.ExtensionContext) {
@@ -10,12 +11,25 @@ export function activate(context: vscode.ExtensionContext) {
         "LWC Development", // Title of the panel displayed to the user
         vscode.ViewColumn.One, // Editor column to show the new webview panel in.
         {
-          enableScripts: true,
+          enableScripts: true
         }
       );
       panel.webview.html = getWebviewContent(
         panel.webview,
         context.extensionUri
+      );
+      panel.webview.onDidReceiveMessage(
+        (message) => {
+          execute(panel, message.command);
+          // switch (message.command) {
+          //   case "alert":
+          //     vscode.window.showErrorMessage(message.text);
+          //     vscode.window.showInformationMessage(message.text);
+          //     return;
+          // }
+        },
+        undefined,
+        context.subscriptions
       );
     })
   );
@@ -43,4 +57,20 @@ function getUri(
   pathList: string[]
 ) {
   return webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, ...pathList));
+}
+
+interface ExecuteResult {
+  stdout?: string;
+  stderr?: string;
+}
+
+function execute(panel: vscode.WebviewPanel, command: string): void {
+  const result: ExecuteResult = {};
+  try {
+    const buffer = execSync(command);
+    result.stdout = buffer.toString();
+  } catch (error) {
+    result.stderr = (error as Buffer).toString();
+  }
+  panel.webview.postMessage(result);
 }

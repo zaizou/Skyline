@@ -1,66 +1,23 @@
 <template>
-  <h1>This is a Heading 1</h1>
-  <h2>This is a Heading 2</h2>
-  <h3>This is a Heading 3</h3>
-  <h4>This is a Heading 4</h4>
-  <h5>This is a Heading 5</h5>
-  <h6>This is a Heading 6</h6>
-
-  <p>This is a paragraph of text.</p>
-
   <p>Click count {clickCount}</p>
 
-  <button onclick={handleClick}>Click me</button>
+  <button onclick={handleClick}>Increment Count</button>
+  <br />
+  <br />
 
-  <ul>
-    <li>This is a bullet point</li>
-    <li>This is another bullet point</li>
-    <li>And yet another</li>
-  </ul>
+  <label for="command">Command:</label>
+  <input
+    type="text"
+    id="command"
+    name="command"
+    value={commandToExecute}
+    onchange={handleInputChange}
+  />
+  <br /><br />
 
-  <ol>
-    <li>This is a numbered list item</li>
-    <li>This is the second item</li>
-    <li>And the third</li>
-  </ol>
+  <button onclick={executeCommand}>Execute Command</button>
 
-  <form>
-    <label for="name">Name:</label>
-    <input type="text" id="name" name="name" /><br /><br />
+  <p>command Output : {stdout}</p>
 
-    <label for="email">Email:</label>
-    <input type="email" id="email" name="email" /><br /><br />
-
-    <label for="message">Message:</label><br />
-
-    <textarea id="message" name="message" rows="5" cols="40"></textarea
-    ><br /><br />
-
-    <input type="submit" value="Submit" />
-  </form>
-
-  <table>
-    <tr>
-      <th>Column 1</th>
-      <th>Column 2</th>
-      <th>Column 3</th>
-    </tr>
-    <tr>
-      <td>Row 1, Column 1</td>
-      <td>Row 1, Column 2</td>
-      <td>Row 1, Column 3</td>
-    </tr>
-    <tr>
-      <td>Row 2, Column 1</td>
-      <td>Row 2, Column 2</td>
-      <td>Row 2, Column 3</td>
-    </tr>
-  </table>
-
-  <select>
-    <option value="volvo">Volvo</option>
-    <option value="saab">Saab</option>
-    <option value="mercedes">Mercedes</option>
-    <option value="audi">Audi</option>
-  </select>
+  <p>command Error : {stderr}</p>
 </template>
