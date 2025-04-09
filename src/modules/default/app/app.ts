@@ -1,4 +1,4 @@
-import { LightningElement, track } from "lwc";
+import { LightningElement, track, api } from "lwc";
 
 export default class App extends LightningElement {
   private static instance?: App;
@@ -7,6 +7,7 @@ export default class App extends LightningElement {
   @track stdout?: String;
   @track stderr?: String;
   commandToExecute = "";
+  iconsUri = "";
 
   constructor() {
     super();
@@ -18,6 +19,11 @@ export default class App extends LightningElement {
       App.instance = new App();
     }
     return App.instance;
+  }
+
+  @api
+  setIconsUri(iconsUri: string) {
+    this.iconsUri = iconsUri;
   }
 
   static handleCommandResult(result: ExecuteResult) {

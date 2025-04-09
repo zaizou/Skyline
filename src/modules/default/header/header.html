@@ -1,0 +1,102 @@
+<template>
+  <div class="slds-builder-header_container container">
+    <header class="slds-builder-header">
+      <div class="slds-builder-header__item">
+        <a href="#" class="slds-builder-header__item-action" title="Back">
+          <span
+            class="slds-icon_container slds-icon-utility-back slds-current-color"
+          >
+            <img class="slds-icon slds-icon_x-small" src={backIcon} />
+            <span class="slds-assistive-text">Back</span>
+          </span>
+        </a>
+      </div>
+      <div class="slds-builder-header__item">
+        <div
+          class="slds-builder-header__item-label slds-media slds-media_center"
+        >
+          <div class="slds-media__figure">
+            <span
+              class="slds-icon_container slds-icon-utility-builder slds-current-color"
+            >
+              <img class="slds-icon slds-icon_x-small" src={appIcon} />
+            </span>
+          </div>
+          <div class="slds-media__body">LWC VSCode Extension</div>
+        </div>
+      </div>
+      <nav class="slds-builder-header__item slds-builder-header__nav">
+        <ul class="slds-builder-header__nav-list">
+          <li
+            class="slds-builder-header__nav-item slds-dropdown-trigger slds-dropdown-trigger_click slds-is-open"
+          >
+            <button
+              class="slds-button slds-builder-header__item-action slds-media slds-media_center"
+              aria-haspopup="true"
+              aria-expanded="false"
+              title="Click to open menu"
+            >
+              <span class="slds-media__figure">
+                <span
+                  class="slds-icon_container slds-icon-utility-page slds-current-color"
+                >
+                  <img class="slds-icon slds-icon_x-small" src={pageIcon} />
+                </span>
+              </span>
+              <span class="slds-media__body">
+                <span class="slds-truncate" title="Dropdown">Dropdown</span>
+                <span
+                  class="slds-icon_container slds-icon-utility-chevrondown slds-current-color slds-m-left_small"
+                >
+                  <img
+                    class="slds-icon slds-icon_x-small"
+                    src={chevronDownIcon}
+                  />
+                </span>
+              </span>
+            </button>
+          </li>
+        </ul>
+      </nav>
+      <div class="slds-builder-header__item slds-has-flexi-truncate">
+        <h1 class="slds-builder-header__item-label">
+          <span class="slds-truncate" title="Page Type">Home</span>
+        </h1>
+      </div>
+      <div class="slds-builder-header__item slds-builder-header__utilities">
+        <div class="slds-builder-header__utilities-item">
+          <a
+            href="#"
+            class="slds-builder-header__item-action slds-media slds-media_center"
+          >
+            <span class="slds-media__figure">
+              <span
+                class="slds-icon_container slds-icon-utility-settings slds-current-color"
+              >
+                <img class="slds-icon slds-icon_x-small" src={settingsIcon} />
+              </span>
+            </span>
+            <span class="slds-media__body">
+              <span class="slds-truncate" title="Link">Settings</span>
+            </span>
+          </a>
+        </div>
+        <div class="slds-builder-header__utilities-item">
+          <a
+            href="#"
+            class="slds-builder-header__item-action slds-media slds-media_center"
+          >
+            <div class="slds-media__figure">
+              <span
+                class="slds-icon_container slds-icon-utility-help slds-current-color"
+              >
+                <img class="slds-icon slds-icon_x-small" src={helpIcon} />
+              </span>
+            </div>
+            <div class="slds-media__body">Help</div>
+          </a>
+        </div>
+      </div>
+    </header>
+  </div>
+</template>

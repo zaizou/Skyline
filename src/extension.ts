@@ -4,8 +4,6 @@ import * as vscode from "vscode";
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand("lwc-dev.helloWorld", () => {
-      // Create and show a new webview
-      vscode.window.showInformationMessage("Hello World from lwc-dev!!!!!!");
       const panel = vscode.window.createWebviewPanel(
         "lwc-dev", // Identifies the type of the webview. Used internally
         "LWC Development", // Title of the panel displayed to the user
@@ -21,12 +19,6 @@ export function activate(context: vscode.ExtensionContext) {
       panel.webview.onDidReceiveMessage(
         (message) => {
           execute(panel, message.command);
-          // switch (message.command) {
-          //   case "alert":
-          //     vscode.window.showErrorMessage(message.text);
-          //     vscode.window.showInformationMessage(message.text);
-          //     return;
-          // }
         },
         undefined,
         context.subscriptions
@@ -44,6 +36,12 @@ function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri) {
     "styles",
     "salesforce-lightning-design-system.min.css"
   ]);
+  const iconUri = getUri(webview, extensionUri, [
+    distFolder,
+    "assets",
+    "icons"
+  ]);
+
   return /*html */ `<!DOCTYPE html>
     <html lang="en">
       <head>
@@ -54,6 +52,10 @@ function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri) {
             rel="stylesheet"
             type="text/css"
             href=${styleUri}
+        />
+        <link
+            rel="icons"
+            href=${iconUri}
         />
       </head>
       <body>
