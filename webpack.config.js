@@ -4,6 +4,7 @@
 
 const path = require("path");
 const LwcWebpackPlugin = require("lwc-webpack-plugin");
+const CopyWebpackPlugin = require("copy-webpack-plugin");
 
 //@ts-check
 /** @typedef {import('webpack').Configuration} WebpackConfig **/
@@ -76,7 +77,16 @@ const indexConfig = {
           }
         });
       }
-    }
+    },
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: "node_modules/@salesforce-ux/design-system/assets",
+          to: "assets",
+          noErrorOnMissing: true
+        }
+      ]
+    })
   ]
 };
 

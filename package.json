@@ -41,6 +41,7 @@
     "@typescript-eslint/parser": "^6.4.1",
     "@vscode/test-electron": "^2.3.4",
     "babel-loader": "^8.4.1",
+    "copy-webpack-plugin": "^12.0.2",
     "eslint": "^8.47.0",
     "glob": "^10.3.3",
     "lwc": "^8.8.0",
@@ -50,5 +51,8 @@
     "typescript": "^5.1.6",
     "webpack": "^5.96.1",
     "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "@salesforce-ux/design-system": "^2.25.3"
   }
 }

@@ -36,13 +36,25 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri) {
-  const scriptUri = getUri(webview, extensionUri, ["dist", "index.js"]);
-  return `<!DOCTYPE html>
+  const distFolder = "dist";
+  const scriptUri = getUri(webview, extensionUri, [distFolder, "index.js"]);
+  const styleUri = getUri(webview, extensionUri, [
+    distFolder,
+    "assets",
+    "styles",
+    "salesforce-lightning-design-system.min.css"
+  ]);
+  return /*html */ `<!DOCTYPE html>
     <html lang="en">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Cat Coding</title>
+        <title>LWC Extension</title>
+        <link
+            rel="stylesheet"
+            type="text/css"
+            href=${styleUri}
+        />
       </head>
       <body>
         <script src="${scriptUri}">

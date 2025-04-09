@@ -1,31 +1,37 @@
 <template>
-  <h1>LWC in VS Code Extension Runtime Demo</h1>
-  <p>
-    This demo showcases the following capabilities of LWC in the VS Code
-    extension runtime:
-  </p>
-  <ul>
-    <li>Real-time component rendering</li>
-    <li>Interactive user input handling</li>
-    <li>Asynchronous operation execution (e.g., command execution)</li>
-    <li>Dynamic output display</li>
-  </ul>
-  <br />
-  <br />
+  <div class="slds-text-color_default">
+    <h1 class="slds-text-heading_large">
+      LWC in VS Code Extension Runtime Demo
+    </h1>
+    <p>
+      This demo showcases the following capabilities of LWC in the VS Code
+      extension runtime:
+    </p>
+    <ul class="slds-list_dotted">
+      <li>Real-time component rendering</li>
+      <li>Interactive user input handling</li>
+      <li>Asynchronous operation execution (e.g., command execution)</li>
+      <li>Dynamic output display</li>
+    </ul>
+    <br />
+    <br />
 
-  <label for="command">Command:</label>
-  <input
-    type="text"
-    id="command"
-    name="command"
-    value={commandToExecute}
-    onchange={handleInputChange}
-  />
-  <br /><br />
+    <label for="command">Command: </label>
+    <input
+      type="text"
+      id="command"
+      name="command"
+      value={commandToExecute}
+      onchange={handleInputChange}
+    />
+    <br /><br />
 
-  <button onclick={executeCommand}>Execute Command</button>
+    <button onclick={executeCommand} class="slds-button slds-button_success">
+      Execute Command
+    </button>
 
-  <p>command Output : {stdout}</p>
+    <p>command Output : {stdout}</p>
 
-  <p>command Error : {stderr}</p>
+    <p>command Error : {stderr}</p>
+  </div>
 </template>
