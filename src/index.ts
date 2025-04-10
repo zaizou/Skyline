@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
     .querySelector('link[rel="icons"]')
     ?.getAttribute("href");
 
-  (appElement as unknown as App).setIconsUri(iconsUri ? iconsUri : "");
+  (appElement as unknown as App).setIconsUri(iconsUri || "");
 });
 
 window.addEventListener("message", (event) => {

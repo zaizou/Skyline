@@ -1,4 +1,5 @@
 import { LightningElement, track, api } from "lwc";
+import { setGlobalIconsUri } from "../icons/icons";
 
 export default class App extends LightningElement {
   private static instance?: App;
@@ -6,8 +7,9 @@ export default class App extends LightningElement {
 
   @track stdout?: String;
   @track stderr?: String;
+  @track iconsUri = "";
   commandToExecute = "";
-  iconsUri = "";
+  renderApplication = false;
 
   constructor() {
     super();
@@ -24,6 +26,8 @@ export default class App extends LightningElement {
   @api
   setIconsUri(iconsUri: string) {
     this.iconsUri = iconsUri;
+    setGlobalIconsUri(iconsUri);
+    this.renderApplication = true;
   }
 
   static handleCommandResult(result: ExecuteResult) {
