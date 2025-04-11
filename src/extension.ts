@@ -18,7 +18,7 @@ export function activate(context: vscode.ExtensionContext) {
       );
       panel.webview.onDidReceiveMessage(
         (message) => {
-          execute(panel, message.command);
+          execute(panel, message.command, message.elementId);
         },
         undefined,
         context.subscriptions
@@ -74,12 +74,21 @@ function getUri(
 }
 
 interface ExecuteResult {
+  command: string;
   stdout?: string;
   stderr?: string;
+  elementId?: string;
 }
 
-function execute(panel: vscode.WebviewPanel, command: string): void {
-  const result: ExecuteResult = {};
+function execute(
+  panel: vscode.WebviewPanel,
+  command: string,
+  elementId?: string
+): void {
+  const result: ExecuteResult = {
+    command,
+    elementId
+  };
   try {
     const buffer = execSync(command);
     result.stdout = buffer.toString();

@@ -1,5 +1,6 @@
 import { LightningElement, track, api } from "lwc";
 import { setGlobalIconsUri } from "../icons/icons";
+import CLIElement from "../cliElement/cliElement";
 
 export default class App extends LightningElement {
   private static instance?: App;
@@ -31,12 +32,19 @@ export default class App extends LightningElement {
   }
 
   static handleCommandResult(result: ExecuteResult) {
-    App.getInstance().stdout = result.stdout;
-    App.getInstance().stderr = result.stderr;
+    const app = App.getInstance();
+    app.stdout = result.stdout;
+    app.stderr = result.stderr;
+    if (result.elementId) {
+      const element = app.template!.querySelector(
+        `[data-handler="${result.elementId}"]`
+      );
+      (element as unknown as CLIElement).handleExecuteResult(result);
+    }
   }
 
-  static sendCommandToTerminal(command: string) {
-    App.vscode.postMessage({ command });
+  static sendCommandToTerminal(command: string, elementId?: string) {
+    App.vscode.postMessage({ command, elementId });
   }
 
   sendCommand(command: string) {
@@ -51,7 +59,9 @@ export default class App extends LightningElement {
     this.sendCommand(this.commandToExecute);
   }
 }
-interface ExecuteResult {
+export interface ExecuteResult {
+  command: string;
   stdout?: string;
   stderr?: string;
+  elementId?: string;
 }
