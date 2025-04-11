@@ -15,26 +15,36 @@
         <li>Asynchronous operation execution (e.g., command execution)</li>
         <li>Dynamic output display</li>
       </ul>
-      <br />
-      <br />
 
-      <label for="command">Command: </label>
-      <input
-        type="text"
-        id="command"
-        name="command"
-        value={commandToExecute}
-        onchange={handleInputChange}
-      />
-      <br /><br />
+      <div class="slds-p-around_medium">
+        <label for="command">Command: </label>
+        <button
+          onclick={executeCommand}
+          class="slds-button slds-button_success slds-m-horizontal_medium"
+        >
+          Execute Command
+        </button>
+      </div>
+      <div class="slds-p-horizontal_medium">
+        <textarea
+          type="text"
+          id="command"
+          name="command"
+          value={commandToExecute}
+          onchange={handleInputChange}
+          class="slds-text-font_monospace full-width"
+        ></textarea>
+      </div>
 
-      <button onclick={executeCommand} class="slds-button slds-button_success">
-        Execute Command
-      </button>
+      <div class="slds-p-around_medium">
+        <p>Command Output:</p>
+        <pre class="slds-box slds-text-font_monospace">{stdout}</pre>
+      </div>
 
-      <p>command Output : {stdout}</p>
-
-      <p>command Error : {stderr}</p>
+      <div class="slds-p-around_medium">
+        <p>Command Error:</p>
+        <pre class="slds-box slds-text-font_monospace">{stderr}</pre>
+      </div>
     </div>
   </template>
 </template>
