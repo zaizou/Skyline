@@ -2,16 +2,6 @@
   <div class="slds-builder-header_container container">
     <header class="slds-builder-header">
       <div class="slds-builder-header__item">
-        <a href="#" class="slds-builder-header__item-action" title="Back">
-          <span
-            class="slds-icon_container slds-icon-utility-back slds-current-color"
-          >
-            <img class="slds-icon slds-icon_x-small" src={icons.utility.back} />
-            <span class="slds-assistive-text">Back</span>
-          </span>
-        </a>
-      </div>
-      <div class="slds-builder-header__item">
         <div
           class="slds-builder-header__item-label slds-media slds-media_center"
         >
@@ -38,19 +28,20 @@
               aria-haspopup="true"
               aria-expanded="false"
               title="Click to open menu"
+              onclick={handleNavigationClick}
             >
               <span class="slds-media__figure">
                 <span
-                  class="slds-icon_container slds-icon-utility-page slds-current-color"
+                  class="slds-icon_container slds-icon-utility-apps slds-current-color"
                 >
                   <img
                     class="slds-icon slds-icon_x-small"
-                    src={icons.utility.page}
+                    src={icons.utility.apps}
                   />
                 </span>
               </span>
               <span class="slds-media__body">
-                <span class="slds-truncate" title="Dropdown">Dropdown</span>
+                <span class="slds-truncate" title="Apps">Apps</span>
                 <span
                   class="slds-icon_container slds-icon-utility-chevrondown slds-current-color slds-m-left_small"
                 >
@@ -61,12 +52,53 @@
                 </span>
               </span>
             </button>
+            <template lwc:if={showNavigation}>
+              <div
+                class="slds-dropdown slds-dropdown_right slds-dropdown_actions"
+              >
+                <ul
+                  class="slds-dropdown__list"
+                  role="menu"
+                  aria-label="Show More"
+                >
+                  <li
+                    class="slds-dropdown__header slds-truncate"
+                    role="presentation"
+                    tabindex="0"
+                  >
+                    Navigate to
+                  </li>
+                  <template for:each={pages} for:item="page">
+                    <li
+                      class="slds-dropdown__item"
+                      role="presentation"
+                      key={page}
+                    >
+                      <a
+                        href="#"
+                        role="menuitem"
+                        tabindex="-1"
+                        data-page={page}
+                        onclick={handlePageClick}
+                      >
+                        <span
+                          class="slds-truncate"
+                          title={page}
+                          data-page={page}
+                          >{page}</span
+                        >
+                      </a>
+                    </li>
+                  </template>
+                </ul>
+              </div>
+            </template>
           </li>
         </ul>
       </nav>
       <div class="slds-builder-header__item slds-has-flexi-truncate">
         <h1 class="slds-builder-header__item-label">
-          <span class="slds-truncate" title="Page Type">Home</span>
+          <span class="slds-truncate" title="Page Type">{currentPage}</span>
         </h1>
       </div>
       <div class="slds-builder-header__item slds-builder-header__utilities">

@@ -1,6 +1,26 @@
-import { LightningElement } from "lwc";
+import { LightningElement, api } from "lwc";
 import { getIcons } from "../icons/icons";
+import { Pages } from "../app/app";
 
 export default class Header extends LightningElement {
   icons = getIcons();
+  showNavigation = false;
+  pages = Object.values(Pages);
+  @api
+  currentPage?: Pages;
+
+  handlePageClick(event: CustomEvent) {
+    this.showNavigation = false;
+    const value = (event.target as HTMLInputElement).dataset.page;
+    console.log({ pageNavigationValue: value });
+    this.dispatchEvent(
+      new CustomEvent("pagenavigation", {
+        detail: value
+      })
+    );
+  }
+
+  handleNavigationClick() {
+    this.showNavigation = !this.showNavigation;
+  }
 }

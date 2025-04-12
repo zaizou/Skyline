@@ -1,10 +1,16 @@
 <template>
   <template lwc:if={renderApplication}>
     <div class="container">
-      <default-header></default-header>
-
-      <default-terminal data-handler="terminal"></default-terminal>
-      <default-home data-handler="home"></default-home>
+      <default-header
+        onpagenavigation={handlePageNavigation}
+        current-page={currentPage}
+      ></default-header>
+      <template lwc:if={showHome}>
+        <default-home data-handler="home"></default-home>
+      </template>
+      <template lwc:if={showTerminal}>
+        <default-terminal data-handler="terminal"></default-terminal>
+      </template>
     </div>
   </template>
 </template>
