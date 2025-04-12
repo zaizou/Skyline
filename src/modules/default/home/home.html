@@ -2,21 +2,20 @@
   <div class="slds-p-around_medium slds-text-color_default">
     <h1 class="slds-text-heading_large">Welcome to the Development App</h1>
     <p>This app helps admins and developers streamline their workflow.</p>
-
-    <h2>System Check</h2>
-    <p>Please ensure the following programs are installed:</p>
-    <ul class="slds-list_dotted">
-      <li>Git</li>
-      <li>SF CLI</li>
-    </ul>
-
     <template lwc:if={fullyVerified}>
-      Congratulations - everything is set up properly!
+      <p>Congratulations - everything is set up properly!</p>
     </template>
-    <div id="system-check-result">
-      <template lwc:if={showSpinner}>
-        <default-spinner></default-spinner>
-      </template>
-    </div>
+    <template lwc:else>
+      <h2>System Check</h2>
+      <p>Please ensure the following programs are installed:</p>
+      <ul class="slds-list_dotted">
+        <li>Git</li>
+        <li>SF CLI</li>
+      </ul>
+    </template>
+
+    <template lwc:if={showSpinner}>
+      <default-spinner></default-spinner>
+    </template>
   </div>
 </template>

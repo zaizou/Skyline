@@ -6,10 +6,7 @@ export default class App extends LightningElement {
   private static instance?: App;
   private static vscode = eval("acquireVsCodeApi()");
 
-  @track stdout?: String;
-  @track stderr?: String;
   @track iconsUri = "";
-  commandToExecute = "";
   renderApplication = false;
 
   constructor() {
@@ -33,8 +30,6 @@ export default class App extends LightningElement {
 
   static handleCommandResult(result: ExecuteResult) {
     const app = App.getInstance();
-    app.stdout = result.stdout;
-    app.stderr = result.stderr;
     if (result.elementId) {
       const element = app.template!.querySelector(
         `[data-handler="${result.elementId}"]`
@@ -45,18 +40,6 @@ export default class App extends LightningElement {
 
   static sendCommandToTerminal(command: string, elementId?: string) {
     App.vscode.postMessage({ command, elementId });
-  }
-
-  sendCommand(command: string) {
-    App.sendCommandToTerminal(command);
-  }
-
-  handleInputChange(event: CustomEvent) {
-    this.commandToExecute = (event.target as HTMLInputElement).value;
-  }
-
-  executeCommand() {
-    this.sendCommand(this.commandToExecute);
   }
 }
 export interface ExecuteResult {
