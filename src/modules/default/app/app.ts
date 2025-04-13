@@ -4,7 +4,8 @@ import CLIElement from "../cliElement/cliElement";
 
 export enum Pages {
   home = "Home",
-  terminal = "Terminal"
+  terminal = "Terminal",
+  metadataExplorer = "Metadata Explorer"
 }
 
 export default class App extends LightningElement {
@@ -58,6 +59,10 @@ export default class App extends LightningElement {
 
   get showTerminal() {
     return this.currentPage === Pages.terminal;
+  }
+
+  get showMetadataExplorer() {
+    return this.currentPage === Pages.metadataExplorer;
   }
 }
 

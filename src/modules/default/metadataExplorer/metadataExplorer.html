@@ -1,0 +1,16 @@
+<template>
+  <div class="slds-p-around_medium slds-text-color_default">
+    <h1 class="slds-text-heading_large">Metadata Explorer</h1>
+
+    <template lwc:if={orgConnectionInfo}>
+      <p>URL: {orgConnectionInfo.result.instanceUrl}</p>
+      <p>username: {orgConnectionInfo.result.username}</p>
+      <p>orgName: {orgConnectionInfo.result.orgName}</p>
+      <p>edition: {orgConnectionInfo.result.edition}</p>
+    </template>
+
+    <template lwc:if={showSpinner}>
+      <default-spinner></default-spinner>
+    </template>
+  </div>
+</template>

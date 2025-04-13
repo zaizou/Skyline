@@ -11,6 +11,11 @@
       <template lwc:if={showTerminal}>
         <default-terminal data-handler="terminal"></default-terminal>
       </template>
+      <template lwc:if={showMetadataExplorer}>
+        <default-metadata-explorer
+          data-handler="metadataExplorer"
+        ></default-metadata-explorer>
+      </template>
     </div>
   </template>
 </template>

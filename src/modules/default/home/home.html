@@ -7,15 +7,14 @@
     </template>
     <template lwc:else>
       <h2>System Check</h2>
-      <p>Please ensure the following programs are installed:</p>
+      <p>The system is verifying that the following programs are installed:</p>
       <ul class="slds-list_dotted">
         <li>Git</li>
         <li>SF CLI</li>
       </ul>
-    </template>
-
-    <template lwc:if={showSpinner}>
-      <default-spinner></default-spinner>
+      <template lwc:if={showSpinner}>
+        <default-spinner></default-spinner>
+      </template>
     </template>
   </div>
 </template>
