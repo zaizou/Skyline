@@ -1,5 +1,6 @@
 import { ExecuteResult } from "../app/app";
 import { track, api } from "lwc";
+import { getIcons } from "../icons/icons";
 import App from "../app/app";
 import CliElement from "../cliElement/cliElement";
 
@@ -18,6 +19,7 @@ const COMMANDS = {
 };
 
 export default class MetadataExplorer extends CliElement {
+  icons = getIcons();
   @track showSpinner = true;
   @track orgConnectionInfo?: SalesforceConnectionInfo;
   @track metadataTypes?: ListMetadataTypesResponse;
@@ -56,13 +58,18 @@ export default class MetadataExplorer extends CliElement {
   }
 
   handleOrgDisplay(result: ExecuteResult) {
-    console.log({ executeResult___3332: result });
     if (result.stdout) {
       this.orgConnectionInfo = JSON.parse(result.stdout);
+      App.sendCommandToTerminal(COMMANDS.listMetadataTypes, ELEMENT_IDENTIFIER);
     }
   }
 
-  handleMetadataTypes(result: ExecuteResult) {}
+  handleMetadataTypes(result: ExecuteResult) {
+    if (result.stdout) {
+      this.metadataTypes = JSON.parse(result.stdout);
+      this.showSpinner = false;
+    }
+  }
 
   handleMetadataOfType(result: ExecuteResult) {}
 

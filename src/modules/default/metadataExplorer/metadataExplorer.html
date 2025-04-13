@@ -9,6 +9,87 @@
       <p>edition: {orgConnectionInfo.result.edition}</p>
     </template>
 
+    <template lwc:if={metadataTypes}>
+      <div class="slds-form-element">
+        <label class="slds-form-element__label" for="combobox-id-1"
+          >Metadata Type</label
+        >
+        <div class="slds-form-element__control">
+          <div class="slds-combobox_container slds-size_small">
+            <div
+              class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click slds-is-open"
+            >
+              <div
+                class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right"
+                role="none"
+              >
+                <div
+                  role="combobox"
+                  tabindex="0"
+                  class="slds-input_faux slds-combobox__input"
+                  aria-labelledby="combobox-label-id-26"
+                  aria-controls="listbox-id-1"
+                  aria-expanded="false"
+                  aria-haspopup="listbox"
+                >
+                  <span class="slds-truncate" id="combobox-value-id-26"
+                    >Select an Option…</span
+                  >
+                </div>
+                <span
+                  class="slds-icon_container slds-icon-utility-down slds-input__icon slds-input__icon_right"
+                >
+                  <img
+                    class="slds-icon slds-icon slds-icon_x-small slds-icon-text-default"
+                    src={icons.utility.chevrondown}
+                  />
+                </span>
+              </div>
+              <div
+                class="slds-dropdown slds-dropdown_length-5 slds-dropdown_fluid"
+                role="listbox"
+                aria-label="Metadata Types"
+                tabindex="0"
+                aria-busy="false"
+              >
+                <ul
+                  class="slds-listbox slds-listbox_vertical"
+                  role="presentation"
+                >
+                  <template
+                    for:each={metadataTypes.result.metadataObjects}
+                    for:item="metadataType"
+                  >
+                    <li
+                      role="presentation"
+                      class="slds-listbox__item"
+                      key={metadataType.directoryName}
+                    >
+                      <div
+                        class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small"
+                        role="option"
+                      >
+                        <span
+                          class="slds-media__figure slds-listbox__option-icon"
+                        ></span>
+                        <span class="slds-media__body">
+                          <span
+                            class="slds-truncate"
+                            title={metadataType.directoryName}
+                            >{metadataType.directoryName}</span
+                          >
+                        </span>
+                      </div>
+                    </li>
+                  </template>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+
     <template lwc:if={showSpinner}>
       <default-spinner></default-spinner>
     </template>
