@@ -53,6 +53,7 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
-    "@salesforce-ux/design-system": "^2.25.3"
+    "@salesforce-ux/design-system": "^2.25.3",
+    "lightning-base-components": "^1.22.3-alpha"
   }
 }

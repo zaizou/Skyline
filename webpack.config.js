@@ -53,7 +53,8 @@ const indexConfig = {
     index: "./src/index.ts"
   },
   resolve: {
-    extensions: [".ts", ".js"]
+    extensions: [".ts", ".js"],
+    modules: [path.resolve(__dirname, "node_modules")]
   },
   output: {
     path: path.resolve(__dirname, "dist"),

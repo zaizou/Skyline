@@ -2,6 +2,9 @@
   "modules": [
     {
       "dir": "src/modules"
+    },
+    {
+      "dir": "node_modules/lightning-base-components/src"
     }
   ]
 }
