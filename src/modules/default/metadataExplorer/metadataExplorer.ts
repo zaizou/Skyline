@@ -20,6 +20,8 @@ const COMMANDS = {
 
 export default class MetadataExplorer extends CliElement {
   icons = getIcons();
+  renderDropdownOptions = false;
+  @track error?: string;
   @track showSpinner = true;
   @track orgConnectionInfo?: SalesforceConnectionInfo;
   @track metadataTypes?: ListMetadataTypesResponse;
@@ -34,7 +36,6 @@ export default class MetadataExplorer extends CliElement {
 
   @api
   handleExecuteResult(result: ExecuteResult) {
-    this.showSpinner = false;
     const command = result.command;
     switch (command) {
       case COMMANDS.orgDisplay:
@@ -61,19 +62,75 @@ export default class MetadataExplorer extends CliElement {
     if (result.stdout) {
       this.orgConnectionInfo = JSON.parse(result.stdout);
       App.sendCommandToTerminal(COMMANDS.listMetadataTypes, ELEMENT_IDENTIFIER);
+    } else if (result.stderr) {
+      this.error = result.stderr;
     }
   }
 
   handleMetadataTypes(result: ExecuteResult) {
     if (result.stdout) {
       this.metadataTypes = JSON.parse(result.stdout);
-      this.showSpinner = false;
+    } else if (result.stderr) {
+      this.error = result.stderr;
     }
+    this.showSpinner = false;
   }
 
-  handleMetadataOfType(result: ExecuteResult) {}
+  handleMetadataOfType(result: ExecuteResult) {
+    if (result.stdout) {
+      this.metadataOfSelectedType = JSON.parse(result.stdout);
+      console.log({
+        metadataOfSelectedType: JSON.stringify(this.metadataOfSelectedType)
+      });
+    } else if (result.stderr) {
+      this.error = result.stderr;
+    }
+    this.showSpinner = false;
+  }
 
   handleMetadataRetrieve(result: ExecuteResult) {}
+
+  handleMetadataTypeSelection(event: CustomEvent) {
+    const selectedMetadataType = (event.target as HTMLInputElement).dataset
+      .metadataType;
+    this.selectedMetadataType = selectedMetadataType;
+    this.renderDropdownOptions = false;
+    this.showSpinner = true;
+    App.sendCommandToTerminal(
+      COMMANDS.listMetadataOfType(this.selectedMetadataType!),
+      ELEMENT_IDENTIFIER
+    );
+  }
+
+  handleDropdownClick(event: CustomEvent) {
+    this.renderDropdownOptions = !this.renderDropdownOptions;
+  }
+
+  get metadataTypeOptions(): string[] | undefined {
+    if (!this.metadataTypes) {
+      return undefined;
+    }
+    const result: string[] = [];
+    for (const mType of this.metadataTypes.result.metadataObjects) {
+      result.push(mType.xmlName);
+    }
+    result.sort();
+    return result;
+  }
+
+  get metadataOfTheSelectedType(): MetadataItem[] | undefined {
+    if (!this.metadataOfSelectedType) {
+      return undefined;
+    }
+    const result = [...this.metadataOfSelectedType.result];
+    return result.sort((a, b) => a.fullName.localeCompare(b.fullName));
+  }
+
+  get dropdownContainerClass() {
+    const prefix =
+      "slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click";
+    return this.renderDropdownOptions ? `${prefix} slds-is-open` : prefix;
+  }
 }
 
 interface SalesforceConnectionInfo {

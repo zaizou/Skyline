@@ -9,16 +9,14 @@
       <p>edition: {orgConnectionInfo.result.edition}</p>
     </template>
 
-    <template lwc:if={metadataTypes}>
+    <template lwc:if={metadataTypeOptions}>
       <div class="slds-form-element">
         <label class="slds-form-element__label" for="combobox-id-1"
           >Metadata Type</label
         >
         <div class="slds-form-element__control">
           <div class="slds-combobox_container slds-size_small">
-            <div
-              class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click slds-is-open"
-            >
+            <div class={dropdownContainerClass}>
               <div
                 class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right"
                 role="none"
@@ -31,10 +29,9 @@
                   aria-controls="listbox-id-1"
                   aria-expanded="false"
                   aria-haspopup="listbox"
+                  onclick={handleDropdownClick}
                 >
-                  <span class="slds-truncate" id="combobox-value-id-26"
-                    >Select an Option…</span
-                  >
+                  <span class="slds-truncate">{selectedMetadataType}</span>
                 </div>
                 <span
                   class="slds-icon_container slds-icon-utility-down slds-input__icon slds-input__icon_right"
@@ -57,26 +54,34 @@
                   role="presentation"
                 >
                   <template
-                    for:each={metadataTypes.result.metadataObjects}
+                    for:each={metadataTypeOptions}
                     for:item="metadataType"
                   >
                     <li
                       role="presentation"
                       class="slds-listbox__item"
-                      key={metadataType.directoryName}
+                      key={metadataType}
+                      onclick={handleMetadataTypeSelection}
+                      data-metadata-type={metadataType}
                     >
                       <div
                         class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small"
                         role="option"
+                        data-metadata-type={metadataType}
                       >
                         <span
                           class="slds-media__figure slds-listbox__option-icon"
+                          data-metadata-type={metadataType}
                         ></span>
-                        <span class="slds-media__body">
+                        <span
+                          class="slds-media__body"
+                          data-metadata-type={metadataType}
+                        >
                           <span
                             class="slds-truncate"
-                            title={metadataType.directoryName}
-                            >{metadataType.directoryName}</span
+                            title={metadataType}
+                            data-metadata-type={metadataType}
+                            >{metadataType}</span
                           >
                         </span>
                       </div>
@@ -87,6 +92,66 @@
             </div>
           </div>
         </div>
+      </div>
+    </template>
+
+    <template lwc:if={metadataOfTheSelectedType}>
+      <table
+        class="slds-table slds-table_cell-buffer slds-table_bordered slds-m-around_medium"
+        aria-labelledby="element-with-table-label other-element-with-table-label"
+      >
+        <thead>
+          <tr class="slds-line-height_reset">
+            <th scope="col">
+              <div class="slds-truncate" title="Full Name">Full Name</div>
+            </th>
+            <th scope="col">
+              <div class="slds-truncate" title="lastModifiedByName">
+                lastModifiedByName
+              </div>
+            </th>
+            <th scope="col">
+              <div class="slds-truncate" title="lastModifiedDate">
+                lastModifiedDate
+              </div>
+            </th>
+            <th scope="col">
+              <div class="slds-truncate" title="Action">Action</div>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <template
+            for:each={metadataOfTheSelectedType}
+            for:item="metadataRecord"
+          >
+            <tr class="slds-hint-parent" key={metadataRecord.fullName}>
+              <th data-label="fullName" scope="row">
+                <div class="slds-truncate">{metadataRecord.fullName}</div>
+              </th>
+              <td data-label="lastModifiedByName">
+                <div class="slds-truncate">
+                  {metadataRecord.lastModifiedByName}
+                </div>
+              </td>
+              <td data-label="lastModifiedDate">
+                <div class="slds-truncate">
+                  {metadataRecord.lastModifiedDate}
+                </div>
+              </td>
+              <td data-label="action">
+                <div class="slds-truncate"></div>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </template>
+
+    <template lwc:if={error}>
+      <div class="slds-p-around_medium">
+        <p>Error:</p>
+        <pre class="slds-box slds-text-font_monospace">{error}</pre>
       </div>
     </template>
 
