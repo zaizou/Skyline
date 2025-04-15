@@ -10,142 +10,27 @@
     </template>
 
     <template lwc:if={metadataTypeOptions}>
-      <div class="slds-form-element">
-        <label class="slds-form-element__label" for="combobox-id-1"
-          >Metadata Type</label
-        >
-        <div class="slds-form-element__control">
-          <div class="slds-combobox_container slds-size_small">
-            <div class={dropdownContainerClass}>
-              <div
-                class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right"
-                role="none"
-              >
-                <div
-                  role="combobox"
-                  tabindex="0"
-                  class="slds-input_faux slds-combobox__input"
-                  aria-labelledby="combobox-label-id-26"
-                  aria-controls="listbox-id-1"
-                  aria-expanded="false"
-                  aria-haspopup="listbox"
-                  onclick={handleDropdownClick}
-                >
-                  <span class="slds-truncate">{selectedMetadataType}</span>
-                </div>
-                <span
-                  class="slds-icon_container slds-icon-utility-down slds-input__icon slds-input__icon_right"
-                >
-                  <img
-                    class="slds-icon slds-icon slds-icon_x-small slds-icon-text-default"
-                    src={icons.utility.chevrondown}
-                  />
-                </span>
-              </div>
-              <div
-                class="slds-dropdown slds-dropdown_length-5 slds-dropdown_fluid"
-                role="listbox"
-                aria-label="Metadata Types"
-                tabindex="0"
-                aria-busy="false"
-              >
-                <ul
-                  class="slds-listbox slds-listbox_vertical"
-                  role="presentation"
-                >
-                  <template
-                    for:each={metadataTypeOptions}
-                    for:item="metadataType"
-                  >
-                    <li
-                      role="presentation"
-                      class="slds-listbox__item"
-                      key={metadataType}
-                      onclick={handleMetadataTypeSelection}
-                      data-metadata-type={metadataType}
-                    >
-                      <div
-                        class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small"
-                        role="option"
-                        data-metadata-type={metadataType}
-                      >
-                        <span
-                          class="slds-media__figure slds-listbox__option-icon"
-                          data-metadata-type={metadataType}
-                        ></span>
-                        <span
-                          class="slds-media__body"
-                          data-metadata-type={metadataType}
-                        >
-                          <span
-                            class="slds-truncate"
-                            title={metadataType}
-                            data-metadata-type={metadataType}
-                            >{metadataType}</span
-                          >
-                        </span>
-                      </div>
-                    </li>
-                  </template>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <lightning-combobox
+        name="selectedMetadataType"
+        label="Select Metadata Type"
+        value={selectedMetadataType}
+        options={metadataTypeOptions}
+        onchange={handleMetadataTypeSelection}
+        onsort={updateColumnSorting}
+      ></lightning-combobox>
     </template>
 
-    <template lwc:if={metadataOfTheSelectedType}>
-      <table
-        class="slds-table slds-table_cell-buffer slds-table_bordered slds-m-around_medium"
-        aria-labelledby="element-with-table-label other-element-with-table-label"
-      >
-        <thead>
-          <tr class="slds-line-height_reset">
-            <th scope="col">
-              <div class="slds-truncate" title="Full Name">Full Name</div>
-            </th>
-            <th scope="col">
-              <div class="slds-truncate" title="lastModifiedByName">
-                lastModifiedByName
-              </div>
-            </th>
-            <th scope="col">
-              <div class="slds-truncate" title="lastModifiedDate">
-                lastModifiedDate
-              </div>
-            </th>
-            <th scope="col">
-              <div class="slds-truncate" title="Action">Action</div>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <template
-            for:each={metadataOfTheSelectedType}
-            for:item="metadataRecord"
-          >
-            <tr class="slds-hint-parent" key={metadataRecord.fullName}>
-              <th data-label="fullName" scope="row">
-                <div class="slds-truncate">{metadataRecord.fullName}</div>
-              </th>
-              <td data-label="lastModifiedByName">
-                <div class="slds-truncate">
-                  {metadataRecord.lastModifiedByName}
-                </div>
-              </td>
-              <td data-label="lastModifiedDate">
-                <div class="slds-truncate">
-                  {metadataRecord.lastModifiedDate}
-                </div>
-              </td>
-              <td data-label="action">
-                <div class="slds-truncate"></div>
-              </td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
+    <template lwc:if={sortedMetadataOfSelectedType}>
+      <div style="height: 300px" class="slds-m-around_medium">
+        <lightning-datatable
+          key-field="fullName"
+          data={sortedMetadataOfSelectedType}
+          columns={columns}
+          sorted-by={sortedBy}
+          onsort={updateColumnSorting}
+        >
+        </lightning-datatable>
+      </div>
     </template>
 
     <template lwc:if={error}>

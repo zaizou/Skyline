@@ -6,6 +6,28 @@ import CliElement from "../cliElement/cliElement";
 
 const ELEMENT_IDENTIFIER = "metadataExplorer";
 
+const COLUMNS = [
+  { label: "Full Name", fieldName: "fullName", sortable: true },
+  {
+    label: "Last Modified By",
+    fieldName: "lastModifiedByName",
+    sortable: true
+  },
+  {
+    label: "Last Modified Date",
+    fieldName: "lastModifiedDate",
+    type: "date",
+    typeAttributes: {
+      year: "numeric",
+      month: "long",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    },
+    sortable: true
+  }
+];
+
 const COMMANDS = {
   orgDisplay: "sf org display --json",
   listMetadataTypes: "sf org list metadata-types --json",
@@ -21,6 +43,10 @@ const COMMANDS = {
 export default class MetadataExplorer extends CliElement {
   icons = getIcons();
   renderDropdownOptions = false;
+  columns = COLUMNS;
+  sortedBy = "lastModifiedDate";
+  sortedDirection = SortOrder.ascending;
+
   @track error?: string;
   @track showSpinner = true;
   @track orgConnectionInfo?: SalesforceConnectionInfo;
@@ -79,9 +105,6 @@ export default class MetadataExplorer extends CliElement {
   handleMetadataOfType(result: ExecuteResult) {
     if (result.stdout) {
       this.metadataOfSelectedType = JSON.parse(result.stdout);
-      console.log({
-        metadataOfSelectedType: JSON.stringify(this.metadataOfSelectedType)
-      });
     } else if (result.stderr) {
       this.error = result.stderr;
     }
@@ -91,8 +114,7 @@ export default class MetadataExplorer extends CliElement {
   handleMetadataRetrieve(result: ExecuteResult) {}
 
   handleMetadataTypeSelection(event: CustomEvent) {
-    const selectedMetadataType = (event.target as HTMLInputElement).dataset
-      .metadataType;
+    const selectedMetadataType = (event.target as HTMLInputElement).value;
     this.selectedMetadataType = selectedMetadataType;
     this.renderDropdownOptions = false;
     this.showSpinner = true;
@@ -106,31 +128,47 @@ export default class MetadataExplorer extends CliElement {
     this.renderDropdownOptions = !this.renderDropdownOptions;
   }
 
-  get metadataTypeOptions(): string[] | undefined {
+  updateColumnSorting(event: CustomEvent) {
+    this.sortedBy = event.detail.fieldName;
+    this.sortedDirection = event.detail.sortDirection;
+  }
+
+  get sortedMetadataOfSelectedType() {
+    if (!this.metadataOfSelectedType?.result) {
+      return undefined;
+    }
+    return [...this.metadataOfSelectedType.result].sort((a, b) => {
+      const left = (a as any)[this.sortedBy];
+      const right = (b as any)[this.sortedBy];
+
+      if (left < right) {
+        return this.sortedDirection === SortOrder.ascending ? -1 : 1;
+      } else if (left > right) {
+        return this.sortedDirection === SortOrder.ascending ? 1 : -1;
+      }
+      return 0;
+    });
+  }
+
+  get metadataTypeOptions(): { label: string; value: string }[] | undefined {
     if (!this.metadataTypes) {
       return undefined;
     }
-    const result: string[] = [];
+    const result = [];
     for (const mType of this.metadataTypes.result.metadataObjects) {
-      result.push(mType.xmlName);
+      result.push({
+        label: mType.xmlName,
+        value: mType.xmlName
+      });
     }
-    result.sort();
+    result.sort((a, b) => a.label.localeCompare(b.label));
     return result;
   }
+}
 
-  get metadataOfTheSelectedType(): MetadataItem[] | undefined {
-    if (!this.metadataOfSelectedType) {
-      return undefined;
-    }
-    const result = [...this.metadataOfSelectedType.result];
-    return result.sort((a, b) => a.fullName.localeCompare(b.fullName));
-  }
-
-  get dropdownContainerClass() {
-    const prefix =
-      "slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click";
-    return this.renderDropdownOptions ? `${prefix} slds-is-open` : prefix;
-  }
+enum SortOrder {
+  ascending = "asc",
+  descending = "desc"
 }
 
 interface SalesforceConnectionInfo {
