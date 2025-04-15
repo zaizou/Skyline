@@ -35,9 +35,16 @@ const COMMANDS = {
     `sf org list metadata --metadata-type ${selectedMetadataType} --json`,
   retrieveMetadata: (
     selectedMetadataType: string,
-    selectedMetadataRow: string
-  ) =>
-    `sf project retrieve start --metadata "${selectedMetadataType}:${selectedMetadataRow}" --json`
+    selectedMetadataRows: string[]
+  ) => {
+    const metadataStatements: string[] = [];
+    for (const row of selectedMetadataRows) {
+      metadataStatements.push(` --metadata "${selectedMetadataType}:${row}"`);
+    }
+    return `sf project retrieve start ${metadataStatements.join(
+      " "
+    )} --ignore-conflicts --json`;
+  }
 };
 
 export default class MetadataExplorer extends CliElement {
@@ -47,13 +54,13 @@ export default class MetadataExplorer extends CliElement {
   sortedBy = "lastModifiedDate";
   sortedDirection = SortOrder.ascending;
 
+  @track selectedRows?: MetadataItem[];
   @track error?: string;
   @track showSpinner = true;
   @track orgConnectionInfo?: SalesforceConnectionInfo;
   @track metadataTypes?: ListMetadataTypesResponse;
   @track selectedMetadataType?: string;
   @track metadataOfSelectedType?: ListMetadataOfTypeResponse;
-  @track selectedMetadataRow?: string;
   @track retrieveMetadataResult?: RetrieveMetadataResponse;
 
   connectedCallback(): void {
@@ -75,7 +82,7 @@ export default class MetadataExplorer extends CliElement {
         break;
       case COMMANDS.retrieveMetadata(
         this.selectedMetadataType!,
-        this.selectedMetadataRow!
+        this.selectedMetadataRows!
       ):
         this.handleMetadataRetrieve(result);
         break;
@@ -111,7 +118,9 @@ export default class MetadataExplorer extends CliElement {
     this.showSpinner = false;
   }
 
-  handleMetadataRetrieve(result: ExecuteResult) {}
+  handleMetadataRetrieve(result: ExecuteResult) {
+    this.showSpinner = false;
+  }
 
   handleMetadataTypeSelection(event: CustomEvent) {
     const selectedMetadataType = (event.target as HTMLInputElement).value;
@@ -131,6 +140,39 @@ export default class MetadataExplorer extends CliElement {
   updateColumnSorting(event: CustomEvent) {
     this.sortedBy = event.detail.fieldName;
     this.sortedDirection = event.detail.sortDirection;
+  }
+
+  handleRowSelection(event: CustomEvent) {
+    const selectedRows = event.detail.selectedRows;
+    this.selectedRows = selectedRows;
+  }
+
+  handleRetrieveClick() {
+    const retrieveCommand = COMMANDS.retrieveMetadata(
+      this.selectedMetadataType!,
+      this.selectedMetadataRows!
+    );
+    console.log({ retrieveCommand });
+    this.showSpinner = true;
+    App.sendCommandToTerminal(retrieveCommand, ELEMENT_IDENTIFIER);
+  }
+
+  get selectedMetadataRows(): string[] | undefined {
+    if (!this.selectedRows) {
+      return undefined;
+    }
+    const result = [];
+    for (const metadataRow of this.selectedRows) {
+      result.push(metadataRow.fullName);
+    }
+    return result;
+  }
+
+  get renderRetrieve() {
+    if (!this.selectedRows) {
+      return false;
+    }
+    return this.selectedRows.length > 0;
   }
 
   get sortedMetadataOfSelectedType() {
