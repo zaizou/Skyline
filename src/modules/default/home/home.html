@@ -13,7 +13,10 @@
         <li>SF CLI</li>
       </ul>
       <template lwc:if={showSpinner}>
-        <default-spinner></default-spinner>
+        <lightning-spinner
+          alternative-text="Loading"
+          size="medium"
+        ></lightning-spinner>
       </template>
     </template>
   </div>
