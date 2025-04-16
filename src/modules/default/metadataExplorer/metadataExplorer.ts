@@ -52,7 +52,7 @@ export default class MetadataExplorer extends CliElement {
   renderDropdownOptions = false;
   columns = COLUMNS;
   sortedBy = "lastModifiedDate";
-  sortedDirection = SortOrder.ascending;
+  sortDirection = SortOrder.ascending;
 
   @track selectedRows?: MetadataItem[];
   @track error?: string;
@@ -138,8 +138,17 @@ export default class MetadataExplorer extends CliElement {
   }
 
   updateColumnSorting(event: CustomEvent) {
-    this.sortedBy = event.detail.fieldName;
-    this.sortedDirection = event.detail.sortDirection;
+    const newSortedBy = event.detail.fieldName;
+    const newSortDirection = event.detail.sortDirection;
+    if (this.sortedBy === newSortedBy) {
+      this.sortDirection =
+        this.sortDirection === SortOrder.ascending
+          ? SortOrder.descending
+          : SortOrder.ascending;
+    } else {
+      this.sortedBy = newSortedBy;
+      this.sortDirection = newSortDirection;
+    }
   }
 
   handleRowSelection(event: CustomEvent) {
@@ -152,7 +161,6 @@ export default class MetadataExplorer extends CliElement {
       this.selectedMetadataType!,
       this.selectedMetadataRows!
     );
-    console.log({ retrieveCommand });
     this.showSpinner = true;
     App.sendCommandToTerminal(retrieveCommand, ELEMENT_IDENTIFIER);
   }
@@ -184,9 +192,9 @@ export default class MetadataExplorer extends CliElement {
       const right = (b as any)[this.sortedBy];
 
       if (left < right) {
-        return this.sortedDirection === SortOrder.ascending ? -1 : 1;
+        return this.sortDirection === SortOrder.ascending ? -1 : 1;
       } else if (left > right) {
-        return this.sortedDirection === SortOrder.ascending ? 1 : -1;
+        return this.sortDirection === SortOrder.ascending ? 1 : -1;
       }
       return 0;
     });

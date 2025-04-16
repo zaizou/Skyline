@@ -9,7 +9,8 @@ export function activate(context: vscode.ExtensionContext) {
         "LWC Development", // Title of the panel displayed to the user
         vscode.ViewColumn.One, // Editor column to show the new webview panel in.
         {
-          enableScripts: true
+          enableScripts: true,
+          retainContextWhenHidden: true
         }
       );
       panel.webview.html = getWebviewContent(

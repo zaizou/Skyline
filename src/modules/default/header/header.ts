@@ -12,7 +12,6 @@ export default class Header extends LightningElement {
   handlePageClick(event: CustomEvent) {
     this.showNavigation = false;
     const value = (event.target as HTMLInputElement).dataset.page;
-    console.log({ pageNavigationValue: value });
     this.dispatchEvent(
       new CustomEvent("pagenavigation", {
         detail: value
