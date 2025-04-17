@@ -54,6 +54,7 @@ export default class MetadataExplorer extends CliElement {
   sortedBy = "lastModifiedDate";
   sortDirection = SortOrder.ascending;
 
+  @track filterState = false;
   @track searchTermComponentName?: string;
   @track searchTermUserName?: string;
   @track searchTermFrom?: string;
@@ -189,6 +190,10 @@ export default class MetadataExplorer extends CliElement {
 
   handleTimeZoneChange(event: CustomEvent) {
     this.selectedTimeZone = event.detail;
+  }
+
+  handleFilterButtonClick() {
+    this.filterState = !this.filterState;
   }
 
   applyFilters(metadataItems: MetadataItem[]): MetadataItem[] {
