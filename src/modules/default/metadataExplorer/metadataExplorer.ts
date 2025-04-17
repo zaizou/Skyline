@@ -54,6 +54,12 @@ export default class MetadataExplorer extends CliElement {
   sortedBy = "lastModifiedDate";
   sortDirection = SortOrder.ascending;
 
+  @track searchTermComponentName?: string;
+  @track searchTermUserName?: string;
+  @track searchTermFrom?: string;
+  @track searchTermTo?: string;
+  @track selectedTimeZone?: "America/Los_Angeles";
+
   @track selectedRows?: MetadataItem[];
   @track error?: string;
   @track showSpinner = true;
@@ -165,6 +171,84 @@ export default class MetadataExplorer extends CliElement {
     App.sendCommandToTerminal(retrieveCommand, ELEMENT_IDENTIFIER);
   }
 
+  handleComponentNameChange(event: CustomEvent) {
+    this.searchTermComponentName = event.detail.value;
+  }
+
+  handleUserNameChange(event: CustomEvent) {
+    this.searchTermUserName = event.detail.value;
+  }
+
+  handleFromChange(event: CustomEvent) {
+    this.searchTermFrom = event.detail.value;
+  }
+
+  handleToChange(event: CustomEvent) {
+    this.searchTermTo = event.detail.value;
+  }
+
+  handleTimeZoneChange(event: CustomEvent) {
+    this.selectedTimeZone = event.detail;
+  }
+
+  applyFilters(metadataItems: MetadataItem[]): MetadataItem[] {
+    metadataItems = this.applyComponentNameFilters(metadataItems);
+    metadataItems = this.applyLastModifiedDateFilters(metadataItems);
+    return metadataItems;
+  }
+
+  applyLastModifiedDateFilters(metadataItems: MetadataItem[]): MetadataItem[] {
+    if (!this.searchTermFrom && !this.searchTermTo) {
+      return metadataItems;
+    }
+    const filteredItems: MetadataItem[] = [];
+    const from = this.searchTermFrom
+      ? new Date(this.searchTermFrom!)
+      : undefined;
+    const to = this.searchTermTo ? new Date(this.searchTermTo!) : undefined;
+
+    for (const item of metadataItems) {
+      const lastModifiedDate = new Date(item.lastModifiedDate);
+      if (
+        (!from || lastModifiedDate >= from) &&
+        (!to || lastModifiedDate <= to)
+      ) {
+        filteredItems.push(item);
+      }
+    }
+    return filteredItems;
+  }
+
+  applyComponentNameFilters(metadataItems: MetadataItem[]): MetadataItem[] {
+    if (!this.searchTermComponentName) {
+      return metadataItems;
+    }
+    const filteredMetadata: MetadataItem[] = [];
+    for (const metadataItem of metadataItems) {
+      if (
+        this.fuzzyMatch(metadataItem.fullName, this.searchTermComponentName)
+      ) {
+        filteredMetadata.push(metadataItem);
+      }
+    }
+    return filteredMetadata;
+  }
+
+  fuzzyMatch(str: string, pattern: string): boolean {
+    pattern = pattern.toLowerCase();
+    str = str.toLowerCase();
+    let patternIdx = 0;
+    for (let i = 0; i < str.length; i++) {
+      if (str[i] === pattern[patternIdx]) {
+        patternIdx++;
+      }
+      if (patternIdx === pattern.length) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   get selectedMetadataRows(): string[] | undefined {
     if (!this.selectedRows) {
       return undefined;
@@ -187,17 +271,20 @@ export default class MetadataExplorer extends CliElement {
     if (!this.metadataOfSelectedType?.result) {
       return undefined;
     }
-    return [...this.metadataOfSelectedType.result].sort((a, b) => {
-      const left = (a as any)[this.sortedBy];
-      const right = (b as any)[this.sortedBy];
+    const sortedMetadata = [...this.metadataOfSelectedType.result].sort(
+      (a, b) => {
+        const left = (a as any)[this.sortedBy];
+        const right = (b as any)[this.sortedBy];
 
-      if (left < right) {
-        return this.sortDirection === SortOrder.ascending ? -1 : 1;
-      } else if (left > right) {
-        return this.sortDirection === SortOrder.ascending ? 1 : -1;
+        if (left < right) {
+          return this.sortDirection === SortOrder.ascending ? -1 : 1;
+        } else if (left > right) {
+          return this.sortDirection === SortOrder.ascending ? 1 : -1;
+        }
+        return 0;
       }
-      return 0;
-    });
+    );
+    return this.applyFilters(sortedMetadata);
   }
 
   get metadataTypeOptions(): { label: string; value: string }[] | undefined {

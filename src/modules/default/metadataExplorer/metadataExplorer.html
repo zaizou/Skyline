@@ -8,7 +8,6 @@
           value={selectedMetadataType}
           options={metadataTypeOptions}
           onchange={handleMetadataTypeSelection}
-          onsort={updateColumnSorting}
           class="slds-m-around_medium"
         ></lightning-combobox>
       </template>
@@ -20,6 +19,44 @@
         ></lightning-button>
       </template>
       <template lwc:if={sortedMetadataOfSelectedType}>
+        <lightning-layout horizontal-align="space">
+          <lightning-layout-item flexibility="auto" padding="around-small">
+            <lightning-input
+              type="text"
+              label="Component Name"
+              onchange={handleComponentNameChange}
+            >
+            </lightning-input>
+          </lightning-layout-item>
+          <lightning-layout-item flexibility="auto" padding="around-small">
+            <lightning-input
+              type="text"
+              label="User Name"
+              onchange={handleUserNameChange}
+            >
+            </lightning-input>
+          </lightning-layout-item>
+          <lightning-layout-item flexibility="auto" padding="around-small">
+            <default-time-zone
+              value={selectedTimeZone}
+              ontimezonechange={handleTimeZoneChange}
+            ></default-time-zone>
+            <lightning-input
+              type="datetime"
+              label="From"
+              timezone={selectedTimeZone}
+              onchange={handleFromChange}
+            >
+            </lightning-input>
+            <lightning-input
+              type="datetime"
+              label="To"
+              timezone={selectedTimeZone}
+              onchange={handleToChange}
+            >
+            </lightning-input>
+          </lightning-layout-item>
+        </lightning-layout>
         <div style="height: 300px" class="slds-m-around_medium">
           <lightning-datatable
             key-field="fullName"
@@ -34,10 +71,10 @@
       </template>
       <template lwc:if={orgConnectionInfo}>
         <div slot="footer">
-          <p>URL: {orgConnectionInfo.result.instanceUrl}</p>
-          <p>username: {orgConnectionInfo.result.username}</p>
-          <p>orgName: {orgConnectionInfo.result.orgName}</p>
-          <p>edition: {orgConnectionInfo.result.edition}</p>
+          <p><b>URL:</b> {orgConnectionInfo.result.instanceUrl}</p>
+          <p><b>username:</b> {orgConnectionInfo.result.username}</p>
+          <p><b>orgName:</b> {orgConnectionInfo.result.orgName}</p>
+          <p><b>edition:</b> {orgConnectionInfo.result.edition}</p>
         </div>
       </template>
     </lightning-card>
