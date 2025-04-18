@@ -7,7 +7,13 @@ import CliElement from "../cliElement/cliElement";
 const ELEMENT_IDENTIFIER = "metadataExplorer";
 const DEFAULT_TIMEZONE = "America/Los_Angeles";
 
+enum ICONS {
+  loading = "utility:spinner",
+  complete = "utility:check"
+}
+
 const COLUMNS = [
+  { label: "Metadata Type", fieldName: "xmlName", sortable: true },
   { label: "Full Name", fieldName: "fullName", sortable: true },
   {
     label: "Last Modified By",
@@ -26,23 +32,32 @@ const COLUMNS = [
       minute: "2-digit"
     },
     sortable: true
+  },
+  {
+    fieldName: "status",
+    label: "Status",
+    cellAttributes: { iconName: { fieldName: "statusIcon" } }
   }
 ];
 
+const COMMAND_PREFIX = {
+  sfOrgDisplay: "sf org display --json",
+  sfOrgListMetadataTypes: "sf org list metadata-types --json",
+  sfOrgListMetadata: "sf org list metadata --metadata-type",
+  sfProjectRetrieveStart: "sf project retrieve start"
+};
+
 const COMMANDS = {
-  orgDisplay: "sf org display --json",
-  listMetadataTypes: "sf org list metadata-types --json",
+  orgDisplay: COMMAND_PREFIX.sfOrgDisplay,
+  listMetadataTypes: COMMAND_PREFIX.sfOrgListMetadataTypes,
   listMetadataOfType: (selectedMetadataType: string): string =>
-    `sf org list metadata --metadata-type ${selectedMetadataType} --json`,
-  retrieveMetadata: (
-    selectedMetadataType: string,
-    selectedMetadataRows: string[]
-  ) => {
+    `${COMMAND_PREFIX.sfOrgListMetadata} ${selectedMetadataType} --json`,
+  retrieveMetadata: (selectedMetadataRows: string[]) => {
     const metadataStatements: string[] = [];
     for (const row of selectedMetadataRows) {
-      metadataStatements.push(` --metadata "${selectedMetadataType}:${row}"`);
+      metadataStatements.push(` --metadata "${row}"`);
     }
-    return `sf project retrieve start ${metadataStatements.join(
+    return `${COMMAND_PREFIX.sfProjectRetrieveStart}${metadataStatements.join(
       " "
     )} --ignore-conflicts --json`;
   }
@@ -62,7 +77,7 @@ export default class MetadataExplorer extends CliElement {
   @track searchTermTo?: string;
   @track selectedTimeZone?: string = DEFAULT_TIMEZONE;
 
-  @track selectedRows?: MetadataItem[];
+  @track selectedRows?: TreeGridMetadataItem[];
   @track error?: string;
   @track showSpinner = true;
   @track orgConnectionInfo?: SalesforceConnectionInfo;
@@ -70,6 +85,8 @@ export default class MetadataExplorer extends CliElement {
   @track selectedMetadataType?: string;
   @track metadataOfSelectedType?: ListMetadataOfTypeResponse;
   @track retrieveMetadataResult?: RetrieveMetadataResponse;
+  @track metadataItemsByType = new Map<string, ListMetadataOfTypeResponse>();
+  @track processedMetadataTypes: string[] = [];
 
   connectedCallback(): void {
     App.sendCommandToTerminal(COMMANDS.orgDisplay, ELEMENT_IDENTIFIER);
@@ -78,24 +95,21 @@ export default class MetadataExplorer extends CliElement {
   @api
   handleExecuteResult(result: ExecuteResult) {
     const command = result.command;
-    switch (command) {
-      case COMMANDS.orgDisplay:
-        this.handleOrgDisplay(result);
-        break;
-      case COMMANDS.listMetadataTypes:
-        this.handleMetadataTypes(result);
-        break;
-      case COMMANDS.listMetadataOfType(this.selectedMetadataType!):
-        this.handleMetadataOfType(result);
-        break;
-      case COMMANDS.retrieveMetadata(
-        this.selectedMetadataType!,
-        this.selectedMetadataRows!
-      ):
-        this.handleMetadataRetrieve(result);
-        break;
-      default:
-        break;
+    if (command.startsWith(COMMAND_PREFIX.sfOrgDisplay)) {
+      this.handleOrgDisplay(result);
+      return;
+    }
+    if (command.startsWith(COMMAND_PREFIX.sfOrgListMetadataTypes)) {
+      this.handleMetadataTypes(result);
+      return;
+    }
+    if (command.startsWith(COMMAND_PREFIX.sfOrgListMetadata)) {
+      this.handleMetadataOfType(result);
+      return;
+    }
+    if (command.startsWith(COMMAND_PREFIX.sfProjectRetrieveStart)) {
+      this.handleMetadataRetrieve(result);
+      return;
     }
   }
 
@@ -111,6 +125,16 @@ export default class MetadataExplorer extends CliElement {
   handleMetadataTypes(result: ExecuteResult) {
     if (result.stdout) {
       this.metadataTypes = JSON.parse(result.stdout);
+      for (const metadataType of this.metadataTypes!.result.metadataObjects.sort(
+        (a, b) => {
+          return a.xmlName.localeCompare(b.xmlName);
+        }
+      )) {
+        App.sendCommandToTerminal(
+          COMMANDS.listMetadataOfType(metadataType.xmlName),
+          ELEMENT_IDENTIFIER
+        );
+      }
     } else if (result.stderr) {
       this.error = result.stderr;
     }
@@ -119,11 +143,34 @@ export default class MetadataExplorer extends CliElement {
 
   handleMetadataOfType(result: ExecuteResult) {
     if (result.stdout) {
-      this.metadataOfSelectedType = JSON.parse(result.stdout);
+      const selectedMetadataType = this.extractMetadataType(result.command);
+      if (!selectedMetadataType) {
+        return;
+      }
+      this.processedMetadataTypes.push(selectedMetadataType);
+      const metadataOfSelectedType = JSON.parse(result.stdout);
+      this.metadataOfSelectedType = metadataOfSelectedType;
+      this.metadataItemsByType.set(
+        selectedMetadataType,
+        metadataOfSelectedType
+      );
     } else if (result.stderr) {
       this.error = result.stderr;
     }
     this.showSpinner = false;
+  }
+
+  extractMetadataType(command: string): string | undefined {
+    const metadataPrefixRegex = new RegExp(
+      COMMAND_PREFIX.sfOrgListMetadata + "\\s+(\\w+)"
+    );
+    const match = command.match(metadataPrefixRegex);
+
+    if (match && match.length > 1) {
+      return match[1];
+    }
+
+    return undefined;
   }
 
   handleMetadataRetrieve(result: ExecuteResult) {
@@ -166,7 +213,6 @@ export default class MetadataExplorer extends CliElement {
 
   handleRetrieveClick() {
     const retrieveCommand = COMMANDS.retrieveMetadata(
-      this.selectedMetadataType!,
       this.selectedMetadataRows!
     );
     this.showSpinner = true;
@@ -250,8 +296,49 @@ export default class MetadataExplorer extends CliElement {
     return false;
   }
 
+  get treeGridRows(): TreeGridMetadataObjectType[] {
+    const result: TreeGridMetadataObjectType[] = [];
+    if (!this.metadataTypes) {
+      return result;
+    }
+    const sortedMetadataTypes = this.metadataTypes.result.metadataObjects.sort(
+      (a, b) => {
+        return a.xmlName.localeCompare(b.xmlName);
+      }
+    );
+    for (const metadataType of sortedMetadataTypes) {
+      const treeGridMetadataType: TreeGridMetadataObjectType = {
+        ...metadataType,
+        id: metadataType.xmlName,
+        statusIcon: ICONS.loading,
+        _children: []
+      };
+      if (this.metadataItemsByType.has(metadataType.xmlName)) {
+        const metadataItems = this.metadataItemsByType.get(
+          metadataType.xmlName
+        )!;
+        const items: TreeGridMetadataItem[] = [];
+        for (const item of metadataItems.result.sort((a, b) =>
+          a.fullName.localeCompare(b.fullName)
+        )) {
+          const treeGridMetadataItem: TreeGridMetadataItem = {
+            ...item,
+            id: item.fullName
+          };
+          items.push(treeGridMetadataItem);
+        }
+        treeGridMetadataType._children = items;
+        treeGridMetadataType.statusIcon = ICONS.complete;
+      }
+      result.push(treeGridMetadataType);
+    }
+    return result;
+  }
+
   get selectedMetadataRows(): string[] | undefined {
-    return this.selectedRows?.map((metadataRow) => metadataRow.fullName);
+    return this.selectedRows
+      ?.filter((metadataRow) => metadataRow.fullName)
+      ?.map((metadataRow) => `${metadataRow.type}:${metadataRow.fullName}`);
   }
 
   get renderRetrieve() {
@@ -391,4 +478,14 @@ interface RetrieveMetadataResponse {
   status: number;
   result: Result;
   warnings: string[];
+}
+
+interface TreeGridMetadataObjectType extends MetadataObjectType {
+  id: string;
+  _children?: MetadataItem[];
+  statusIcon?: string;
+}
+
+interface TreeGridMetadataItem extends MetadataItem {
+  id: string;
 }

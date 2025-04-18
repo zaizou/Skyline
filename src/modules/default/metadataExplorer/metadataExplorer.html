@@ -1,16 +1,6 @@
 <template>
   <div class="slds-p-around_medium slds-text-color_default">
     <lightning-card title="Metadata Explorer">
-      <template lwc:if={metadataTypeOptions}>
-        <lightning-combobox
-          name="selectedMetadataType"
-          label="Select Metadata Type"
-          value={selectedMetadataType}
-          options={metadataTypeOptions}
-          onchange={handleMetadataTypeSelection}
-          class="slds-m-around_medium"
-        ></lightning-combobox>
-      </template>
       <template lwc:if={renderRetrieve}>
         <lightning-button
           label="Retrieve"
@@ -18,67 +8,66 @@
           onclick={handleRetrieveClick}
         ></lightning-button>
       </template>
-      <template lwc:if={sortedMetadataOfSelectedType}>
-        <lightning-button-icon-stateful
-          icon-name="utility:filterList"
-          selected={filterState}
-          onclick={handleFilterButtonClick}
-          alternative-text="filter"
-          class="slds-p-horizontal_medium"
-          slot="actions"
-        ></lightning-button-icon-stateful>
-        <template lwc:if={filterState}>
-          <lightning-layout horizontal-align="space">
-            <lightning-layout-item flexibility="auto" padding="around-small">
-              <lightning-input
-                type="text"
-                label="Component Name"
-                onchange={handleComponentNameChange}
-              >
-              </lightning-input>
-            </lightning-layout-item>
-            <lightning-layout-item flexibility="auto" padding="around-small">
-              <lightning-input
-                type="text"
-                label="User Name"
-                onchange={handleUserNameChange}
-              >
-              </lightning-input>
-            </lightning-layout-item>
-            <lightning-layout-item flexibility="auto" padding="around-small">
-              <default-time-zone
-                value={selectedTimeZone}
-                ontimezonechange={handleTimeZoneChange}
-              ></default-time-zone>
-              <lightning-input
-                type="datetime"
-                label="From"
-                timezone={selectedTimeZone}
-                onchange={handleFromChange}
-              >
-              </lightning-input>
-              <lightning-input
-                type="datetime"
-                label="To"
-                timezone={selectedTimeZone}
-                onchange={handleToChange}
-              >
-              </lightning-input>
-            </lightning-layout-item>
-          </lightning-layout>
-        </template>
-        <div style="height: 300px" class="slds-m-around_medium">
-          <lightning-datatable
-            key-field="fullName"
-            data={sortedMetadataOfSelectedType}
-            columns={columns}
-            sorted-by={sortedBy}
-            onsort={updateColumnSorting}
-            onrowselection={handleRowSelection}
-          >
-          </lightning-datatable>
-        </div>
+      <lightning-button-icon-stateful
+        icon-name="utility:filterList"
+        selected={filterState}
+        onclick={handleFilterButtonClick}
+        alternative-text="filter"
+        class="slds-p-horizontal_medium"
+        slot="actions"
+      ></lightning-button-icon-stateful>
+      <template lwc:if={filterState}>
+        <lightning-layout horizontal-align="space">
+          <lightning-layout-item flexibility="auto" padding="around-small">
+            <lightning-input
+              type="text"
+              label="Component Name"
+              onchange={handleComponentNameChange}
+            >
+            </lightning-input>
+          </lightning-layout-item>
+          <lightning-layout-item flexibility="auto" padding="around-small">
+            <lightning-input
+              type="text"
+              label="User Name"
+              onchange={handleUserNameChange}
+            >
+            </lightning-input>
+          </lightning-layout-item>
+          <lightning-layout-item flexibility="auto" padding="around-small">
+            <default-time-zone
+              value={selectedTimeZone}
+              ontimezonechange={handleTimeZoneChange}
+            ></default-time-zone>
+            <lightning-input
+              type="datetime"
+              label="From"
+              timezone={selectedTimeZone}
+              onchange={handleFromChange}
+            >
+            </lightning-input>
+            <lightning-input
+              type="datetime"
+              label="To"
+              timezone={selectedTimeZone}
+              onchange={handleToChange}
+            >
+            </lightning-input>
+          </lightning-layout-item>
+        </lightning-layout>
       </template>
+      <template lwc:if={treeGridRows}>
+        <lightning-tree-grid
+          data={treeGridRows}
+          columns={columns}
+          key-field="id"
+          onrowselection={handleRowSelection}
+        >
+        </lightning-tree-grid>
+      </template>
+      <p class="slds-hidden">
+        processedMetadataTypes : {processedMetadataTypes}
+      </p>
       <template lwc:if={orgConnectionInfo}>
         <div slot="footer">
           <p><b>URL:</b> {orgConnectionInfo.result.instanceUrl}</p>

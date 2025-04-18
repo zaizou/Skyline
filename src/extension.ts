@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { exec } from "child_process";
 import * as vscode from "vscode";
 
 export function activate(context: vscode.ExtensionContext) {
@@ -90,11 +90,12 @@ function execute(
     command,
     elementId
   };
-  try {
-    const buffer = execSync(command);
-    result.stdout = buffer.toString();
-  } catch (error) {
-    result.stderr = (error as Buffer).toString();
-  }
-  panel.webview.postMessage(result);
+  exec(command, (error, stdout, stderr) => {
+    if (error) {
+      result.stderr = stderr;
+    } else {
+      result.stdout = stdout;
+    }
+    panel.webview.postMessage(result);
+  });
 }
