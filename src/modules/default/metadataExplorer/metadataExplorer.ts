@@ -5,6 +5,7 @@ import App from "../app/app";
 import CliElement from "../cliElement/cliElement";
 
 const ELEMENT_IDENTIFIER = "metadataExplorer";
+const DEFAULT_TIMEZONE = "America/Los_Angeles";
 
 const COLUMNS = [
   { label: "Full Name", fieldName: "fullName", sortable: true },
@@ -59,7 +60,7 @@ export default class MetadataExplorer extends CliElement {
   @track searchTermUserName?: string;
   @track searchTermFrom?: string;
   @track searchTermTo?: string;
-  @track selectedTimeZone?: "America/Los_Angeles";
+  @track selectedTimeZone?: string = DEFAULT_TIMEZONE;
 
   @track selectedRows?: MetadataItem[];
   @track error?: string;
@@ -194,6 +195,11 @@ export default class MetadataExplorer extends CliElement {
 
   handleFilterButtonClick() {
     this.filterState = !this.filterState;
+    this.searchTermComponentName = undefined;
+    this.searchTermUserName = undefined;
+    this.searchTermFrom = undefined;
+    this.searchTermTo = undefined;
+    this.selectedTimeZone = DEFAULT_TIMEZONE;
   }
 
   applyFilters(metadataItems: MetadataItem[]): MetadataItem[] {
@@ -206,37 +212,27 @@ export default class MetadataExplorer extends CliElement {
     if (!this.searchTermFrom && !this.searchTermTo) {
       return metadataItems;
     }
-    const filteredItems: MetadataItem[] = [];
-    const from = this.searchTermFrom
-      ? new Date(this.searchTermFrom!)
-      : undefined;
-    const to = this.searchTermTo ? new Date(this.searchTermTo!) : undefined;
 
-    for (const item of metadataItems) {
+    const from = this.searchTermFrom
+      ? new Date(this.searchTermFrom)
+      : undefined;
+    const to = this.searchTermTo ? new Date(this.searchTermTo) : undefined;
+
+    return metadataItems.filter((item) => {
       const lastModifiedDate = new Date(item.lastModifiedDate);
-      if (
-        (!from || lastModifiedDate >= from) &&
-        (!to || lastModifiedDate <= to)
-      ) {
-        filteredItems.push(item);
-      }
-    }
-    return filteredItems;
+      return (
+        (!from || lastModifiedDate >= from) && (!to || lastModifiedDate <= to)
+      );
+    });
   }
 
   applyComponentNameFilters(metadataItems: MetadataItem[]): MetadataItem[] {
     if (!this.searchTermComponentName) {
       return metadataItems;
     }
-    const filteredMetadata: MetadataItem[] = [];
-    for (const metadataItem of metadataItems) {
-      if (
-        this.fuzzyMatch(metadataItem.fullName, this.searchTermComponentName)
-      ) {
-        filteredMetadata.push(metadataItem);
-      }
-    }
-    return filteredMetadata;
+    return metadataItems.filter((metadataItem) =>
+      this.fuzzyMatch(metadataItem.fullName, this.searchTermComponentName!)
+    );
   }
 
   fuzzyMatch(str: string, pattern: string): boolean {
@@ -255,14 +251,7 @@ export default class MetadataExplorer extends CliElement {
   }
 
   get selectedMetadataRows(): string[] | undefined {
-    if (!this.selectedRows) {
-      return undefined;
-    }
-    const result = [];
-    for (const metadataRow of this.selectedRows) {
-      result.push(metadataRow.fullName);
-    }
-    return result;
+    return this.selectedRows?.map((metadataRow) => metadataRow.fullName);
   }
 
   get renderRetrieve() {
@@ -278,9 +267,8 @@ export default class MetadataExplorer extends CliElement {
     }
     const sortedMetadata = [...this.metadataOfSelectedType.result].sort(
       (a, b) => {
-        const left = (a as any)[this.sortedBy];
-        const right = (b as any)[this.sortedBy];
-
+        const left = a[this.sortedBy as keyof MetadataItem];
+        const right = b[this.sortedBy as keyof MetadataItem];
         if (left < right) {
           return this.sortDirection === SortOrder.ascending ? -1 : 1;
         } else if (left > right) {
@@ -293,18 +281,9 @@ export default class MetadataExplorer extends CliElement {
   }
 
   get metadataTypeOptions(): { label: string; value: string }[] | undefined {
-    if (!this.metadataTypes) {
-      return undefined;
-    }
-    const result = [];
-    for (const mType of this.metadataTypes.result.metadataObjects) {
-      result.push({
-        label: mType.xmlName,
-        value: mType.xmlName
-      });
-    }
-    result.sort((a, b) => a.label.localeCompare(b.label));
-    return result;
+    return this.metadataTypes?.result.metadataObjects
+      .map((mType) => ({ label: mType.xmlName, value: mType.xmlName }))
+      .sort((a, b) => a.label.localeCompare(b.label));
   }
 }
 
