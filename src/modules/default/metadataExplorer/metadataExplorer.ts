@@ -1,6 +1,5 @@
 import { ExecuteResult } from "../app/app";
 import { track, api } from "lwc";
-import { getIcons } from "../icons/icons";
 import App from "../app/app";
 import CliElement from "../cliElement/cliElement";
 
@@ -64,7 +63,6 @@ const COMMANDS = {
 };
 
 export default class MetadataExplorer extends CliElement {
-  icons = getIcons();
   renderDropdownOptions = false;
   columns = COLUMNS;
   sortedBy = "lastModifiedDate";

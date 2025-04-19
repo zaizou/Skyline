@@ -1,6 +1,5 @@
 import { api } from "lwc";
 import CLIElement from "../cliElement/cliElement";
-import { getIcons } from "../icons/icons";
 import App from "../app/app";
 import { ExecuteResult } from "../app/app";
 
@@ -18,7 +17,6 @@ const COMMANDS = {
 const ELEMENT_IDENTIFIER = "home";
 
 export default class Home extends CLIElement {
-  icons = getIcons();
   showSpinner = false;
   gitInstalled = false;
   sfCliInstalled = false;

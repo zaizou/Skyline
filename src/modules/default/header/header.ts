@@ -1,9 +1,7 @@
 import { LightningElement, api } from "lwc";
-import { getIcons } from "../icons/icons";
 import { Pages } from "../app/app";
 
 export default class Header extends LightningElement {
-  icons = getIcons();
   showNavigation = false;
   pages = Object.values(Pages);
   @api

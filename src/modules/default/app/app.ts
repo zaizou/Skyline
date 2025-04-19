@@ -1,5 +1,4 @@
 import { LightningElement, track, api } from "lwc";
-import { setGlobalIconsUri } from "../icons/icons";
 import CLIElement from "../cliElement/cliElement";
 
 export enum Pages {
@@ -12,9 +11,6 @@ export default class App extends LightningElement {
   private static instance?: App;
   private static vscode = eval("acquireVsCodeApi()");
   currentPage = Pages.home;
-
-  @track iconsUri = "";
-  renderApplication = false;
 
   constructor() {
     super();
@@ -40,13 +36,6 @@ export default class App extends LightningElement {
 
   static sendCommandToTerminal(command: string, elementId?: string) {
     App.vscode.postMessage({ command, elementId });
-  }
-
-  @api
-  setIconsUri(iconsUri: string) {
-    this.iconsUri = iconsUri;
-    setGlobalIconsUri(iconsUri);
-    this.renderApplication = true;
   }
 
   handlePageNavigation(event: CustomEvent) {
