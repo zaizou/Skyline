@@ -1,71 +1,67 @@
-# lwc-dev README
+# LWC VSCode Extension
 
-This is the README for your extension "lwc-dev". After writing up a brief description, we recommend including the following sections.
+This project demonstrates a Visual Studio Code extension built using Lightning Web Components (LWC). It showcases several key capabilities of LWC within the VS Code extension environment, including real-time component rendering, interactive user input handling, asynchronous operation execution (using the Salesforce CLI), and dynamic output display.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- **Modular Design:** The application is built using LWC modules for better organization and reusability.
+- **Salesforce CLI Integration:** The extension interacts with the Salesforce CLI to execute commands and retrieve data. This allows for integration with Salesforce orgs. Requires the Salesforce CLI to be installed.
+- **Real-time Updates:** Changes in the UI are reflected immediately, providing a responsive user experience.
+- **Asynchronous Operations:** The extension handles asynchronous operations gracefully, providing feedback to the user while commands are executed.
+- **Error Handling:** Basic error handling is implemented to display informative messages to the user in case of failures.
+- **Interactive Components:** The Metadata Explorer allows users to filter and retrieve metadata from their Salesforce org.
+- **Home Page System Check:** A home page verifies the installation of necessary tools (Git and SF CLI).
 
-For example if there is an image subfolder under your extension project workspace:
+## Components
 
-\!\[feature X\]\(images/feature-x.png\)
+The extension comprises the following key LWC components:
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+- **App:** The main application component, routing between different pages.
+- **Home:** A welcome page verifying system prerequisites.
+- **Terminal:** A component for executing arbitrary commands and displaying the output.
+- **Metadata Explorer:** A sophisticated component to interact with Salesforce metadata. This allows for listing metadata types, filtering metadata based on name, user, and date, and retrieving selected metadata.
+- **Header:** Navigation bar across the application.
+- **CliElement:** Base component for components requiring CLI interaction.
 
-## Requirements
+## Getting Started
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+1. **Prerequisites:**
 
-## Extension Settings
+   - Node.js and npm (or yarn)
+   - Visual Studio Code
+   - Salesforce CLI (for Metadata Explorer functionality)
+   - Git (for Home page system check)
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+2. **Clone the repository:**
 
-For example:
+   ```bash
+   git clone <repository_url>
+   ```
 
-This extension contributes the following settings:
+3. **Navigate to the project directory:**
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+   ```bash
+   cd <project_directory>
+   ```
 
-## Known Issues
+4. **Install dependencies:**
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+   ```bash
+   npm install
+   ```
 
-## Release Notes
+5. **Build the extension:** (This step might need adjustments depending on the exact build process used in your project; look for a build script in your package.json)
 
-Users appreciate release notes as you update your extension.
+   ```bash
+   npm run build
+   ```
 
-### 1.0.0
+6. **Run the extension:**
 
-Initial release of ...
+   Open VS Code and press `F5`. This will launch a new VS Code window with the extension loaded. You can then interact with the extension through the command palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) by searching for "LWC Development".
 
-### 1.0.1
+7. **Running Tests:** Navigate to the `test` directory and execute `npm run test`.
 
-Fixed issue #.
+## Extension Development Path and Tests Path
 
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+The `runTest.ts` file contains the paths to the extension and test files. Update these if necessary.
