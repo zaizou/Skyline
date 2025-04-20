@@ -12,7 +12,7 @@ enum ICONS {
 }
 
 const COLUMNS = [
-  { label: "Metadata Type", fieldName: "xmlName", sortable: true },
+  { label: "Metadata Type", fieldName: "metadataType", sortable: true },
   { label: "Full Name", fieldName: "fullName", sortable: true },
   {
     label: "Last Modified By",
@@ -66,7 +66,6 @@ export default class MetadataExplorer extends CliElement {
   renderDropdownOptions = false;
   columns = COLUMNS;
   sortedBy = "lastModifiedDate";
-  sortDirection = SortOrder.ascending;
 
   @track filterState = false;
   @track searchTermComponentName?: string;
@@ -123,16 +122,6 @@ export default class MetadataExplorer extends CliElement {
   handleMetadataTypes(result: ExecuteResult) {
     if (result.stdout) {
       this.metadataTypes = JSON.parse(result.stdout);
-      for (const metadataType of this.metadataTypes!.result.metadataObjects.sort(
-        (a, b) => {
-          return a.xmlName.localeCompare(b.xmlName);
-        }
-      )) {
-        App.sendCommandToTerminal(
-          COMMANDS.listMetadataOfType(metadataType.xmlName),
-          ELEMENT_IDENTIFIER
-        );
-      }
     } else if (result.stderr) {
       this.error = result.stderr;
     }
@@ -188,20 +177,6 @@ export default class MetadataExplorer extends CliElement {
 
   handleDropdownClick(event: CustomEvent) {
     this.renderDropdownOptions = !this.renderDropdownOptions;
-  }
-
-  updateColumnSorting(event: CustomEvent) {
-    const newSortedBy = event.detail.fieldName;
-    const newSortDirection = event.detail.sortDirection;
-    if (this.sortedBy === newSortedBy) {
-      this.sortDirection =
-        this.sortDirection === SortOrder.ascending
-          ? SortOrder.descending
-          : SortOrder.ascending;
-    } else {
-      this.sortedBy = newSortedBy;
-      this.sortDirection = newSortDirection;
-    }
   }
 
   handleRowSelection(event: CustomEvent) {
@@ -294,43 +269,33 @@ export default class MetadataExplorer extends CliElement {
     return false;
   }
 
-  get treeGridRows(): TreeGridMetadataObjectType[] {
-    const result: TreeGridMetadataObjectType[] = [];
-    if (!this.metadataTypes) {
-      return result;
+  get treeGridRows(): TreeGridMetadataObjectType[] | undefined {
+    if (!this.selectedMetadataType) {
+      return undefined;
     }
-    const sortedMetadataTypes = this.metadataTypes.result.metadataObjects.sort(
-      (a, b) => {
-        return a.xmlName.localeCompare(b.xmlName);
-      }
+    const treeGridMetadataType: TreeGridMetadataObjectType = {
+      metadataType: this.selectedMetadataType,
+      id: this.selectedMetadataType,
+      statusIcon: ICONS.loading,
+      _children: []
+    };
+    if (!this.metadataOfSelectedType?.result) {
+      return [treeGridMetadataType];
+    }
+    const filteredMetadata = this.applyFilters(
+      this.metadataOfSelectedType.result
     );
-    for (const metadataType of sortedMetadataTypes) {
-      const treeGridMetadataType: TreeGridMetadataObjectType = {
-        ...metadataType,
-        id: metadataType.xmlName,
-        statusIcon: ICONS.loading,
-        _children: []
+    for (const metadataItem of filteredMetadata!.sort((a, b) => {
+      return a.fullName.localeCompare(b.fullName);
+    })) {
+      const treeGridMetadataItem: TreeGridMetadataItem = {
+        ...metadataItem,
+        id: metadataItem.fullName
       };
-      if (this.metadataItemsByType.has(metadataType.xmlName)) {
-        const metadataItems = this.metadataItemsByType.get(
-          metadataType.xmlName
-        )!;
-        const items: TreeGridMetadataItem[] = [];
-        for (const item of metadataItems.result.sort((a, b) =>
-          a.fullName.localeCompare(b.fullName)
-        )) {
-          const treeGridMetadataItem: TreeGridMetadataItem = {
-            ...item,
-            id: item.fullName
-          };
-          items.push(treeGridMetadataItem);
-        }
-        treeGridMetadataType._children = items;
-        treeGridMetadataType.statusIcon = ICONS.complete;
-      }
-      result.push(treeGridMetadataType);
+      treeGridMetadataType._children!.push(treeGridMetadataItem);
     }
-    return result;
+    treeGridMetadataType.statusIcon = ICONS.complete;
+    return [treeGridMetadataType];
   }
 
   get selectedMetadataRows(): string[] | undefined {
@@ -346,35 +311,11 @@ export default class MetadataExplorer extends CliElement {
     return this.selectedRows.length > 0;
   }
 
-  get sortedMetadataOfSelectedType() {
-    if (!this.metadataOfSelectedType?.result) {
-      return undefined;
-    }
-    const sortedMetadata = [...this.metadataOfSelectedType.result].sort(
-      (a, b) => {
-        const left = a[this.sortedBy as keyof MetadataItem];
-        const right = b[this.sortedBy as keyof MetadataItem];
-        if (left < right) {
-          return this.sortDirection === SortOrder.ascending ? -1 : 1;
-        } else if (left > right) {
-          return this.sortDirection === SortOrder.ascending ? 1 : -1;
-        }
-        return 0;
-      }
-    );
-    return this.applyFilters(sortedMetadata);
-  }
-
   get metadataTypeOptions(): { label: string; value: string }[] | undefined {
     return this.metadataTypes?.result.metadataObjects
       .map((mType) => ({ label: mType.xmlName, value: mType.xmlName }))
       .sort((a, b) => a.label.localeCompare(b.label));
   }
-}
-
-enum SortOrder {
-  ascending = "asc",
-  descending = "desc"
 }
 
 interface SalesforceConnectionInfo {
@@ -468,7 +409,7 @@ interface Result {
   id: string;
   status: string;
   success: boolean;
-  messages: any[]; // Adjust the type as needed
+  messages: any[];
   files: File[];
 }
 
@@ -478,7 +419,8 @@ interface RetrieveMetadataResponse {
   warnings: string[];
 }
 
-interface TreeGridMetadataObjectType extends MetadataObjectType {
+interface TreeGridMetadataObjectType {
+  metadataType: string;
   id: string;
   _children?: MetadataItem[];
   statusIcon?: string;
