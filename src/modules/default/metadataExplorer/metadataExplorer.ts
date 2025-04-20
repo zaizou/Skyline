@@ -79,8 +79,7 @@ export default class MetadataExplorer extends CliElement {
   @track showSpinner = true;
   @track orgConnectionInfo?: SalesforceConnectionInfo;
   @track metadataTypes?: ListMetadataTypesResponse;
-  @track selectedMetadataType?: string;
-  @track metadataOfSelectedType?: ListMetadataOfTypeResponse;
+  @track selectedMetadataType?: MetadataObjectType;
   @track retrieveMetadataResult?: RetrieveMetadataResponse;
   @track metadataItemsByType = new Map<string, ListMetadataOfTypeResponse>();
   @track processedMetadataTypes: string[] = [];
@@ -136,7 +135,6 @@ export default class MetadataExplorer extends CliElement {
       }
       this.processedMetadataTypes.push(selectedMetadataType);
       const metadataOfSelectedType = JSON.parse(result.stdout);
-      this.metadataOfSelectedType = metadataOfSelectedType;
       this.metadataItemsByType.set(
         selectedMetadataType,
         metadataOfSelectedType
@@ -166,13 +164,24 @@ export default class MetadataExplorer extends CliElement {
 
   handleMetadataTypeSelection(event: CustomEvent) {
     const selectedMetadataType = (event.target as HTMLInputElement).value;
-    this.selectedMetadataType = selectedMetadataType;
+    this.selectedMetadataType = this.metadataTypes?.result.metadataObjects.find(
+      (metadataType) => metadataType.xmlName === selectedMetadataType
+    );
     this.renderDropdownOptions = false;
     this.showSpinner = true;
     App.sendCommandToTerminal(
-      COMMANDS.listMetadataOfType(this.selectedMetadataType!),
+      COMMANDS.listMetadataOfType(this.selectedMetadataType!.xmlName),
       ELEMENT_IDENTIFIER
     );
+    if (this.selectedMetadataType!.childXmlNames) {
+      for (const childMetadataType of this.selectedMetadataType!
+        .childXmlNames) {
+        App.sendCommandToTerminal(
+          COMMANDS.listMetadataOfType(childMetadataType),
+          ELEMENT_IDENTIFIER
+        );
+      }
+    }
   }
 
   handleDropdownClick(event: CustomEvent) {
@@ -269,33 +278,96 @@ export default class MetadataExplorer extends CliElement {
     return false;
   }
 
+  print() {
+    console.log({ treeGridRows: this.treeGridRows });
+    console.log({
+      selectedMetadataType: JSON.stringify(this.selectedMetadataType)
+    });
+    console.log({ metadataItemsByType: this.metadataItemsByType });
+  }
+
+  getObjectNameFromFileName(fileName: string): string {
+    const firstSlashIndex = fileName.indexOf("/");
+    if (firstSlashIndex === -1) {
+      return ""; // Or handle this case as needed, maybe return fileName?
+    }
+    const firstDotAfterSlashIndex = fileName.indexOf(".", firstSlashIndex + 1);
+    if (firstDotAfterSlashIndex === -1) {
+      return fileName.substring(firstSlashIndex + 1);
+    }
+    return fileName.substring(firstSlashIndex + 1, firstDotAfterSlashIndex);
+  }
+
   get treeGridRows(): TreeGridMetadataObjectType[] | undefined {
     if (!this.selectedMetadataType) {
       return undefined;
     }
+
     const treeGridMetadataType: TreeGridMetadataObjectType = {
-      metadataType: this.selectedMetadataType,
-      id: this.selectedMetadataType,
+      metadataType: this.selectedMetadataType.xmlName,
+      id: this.selectedMetadataType.xmlName,
       statusIcon: ICONS.loading,
       _children: []
     };
-    if (!this.metadataOfSelectedType?.result) {
+
+    const metadataItems = this.metadataItemsByType.get(
+      this.selectedMetadataType.xmlName
+    );
+    if (!metadataItems) {
       return [treeGridMetadataType];
     }
-    const filteredMetadata = this.applyFilters(
-      this.metadataOfSelectedType.result
+
+    const filteredMetadata = this.applyFilters(metadataItems.result).sort(
+      (a, b) => a.fullName.localeCompare(b.fullName)
     );
-    for (const metadataItem of filteredMetadata!.sort((a, b) => {
-      return a.fullName.localeCompare(b.fullName);
-    })) {
+
+    treeGridMetadataType._children = filteredMetadata.map((metadataItem) => {
       const treeGridMetadataItem: TreeGridMetadataItem = {
         ...metadataItem,
-        id: metadataItem.fullName
+        id: metadataItem.fullName,
+        _children: this.getChildMetadataItems(metadataItem)
       };
-      treeGridMetadataType._children!.push(treeGridMetadataItem);
-    }
+      return treeGridMetadataItem;
+    });
+
     treeGridMetadataType.statusIcon = ICONS.complete;
     return [treeGridMetadataType];
+  }
+
+  private getChildMetadataItems(
+    metadataItem: MetadataItem
+  ): TreeGridMetadataObjectType[] | undefined {
+    if (!this.selectedMetadataType?.childXmlNames) {
+      return undefined;
+    }
+
+    return this.selectedMetadataType.childXmlNames.map((childType) => {
+      const childTypeRow: TreeGridMetadataObjectType = {
+        metadataType: childType,
+        id: `${metadataItem.type}.${metadataItem.fullName}.${childType}`,
+        statusIcon: ICONS.loading,
+        _children: []
+      };
+
+      const childMetadataItems = this.metadataItemsByType.get(childType);
+      if (childMetadataItems) {
+        childTypeRow._children = this.applyFilters(
+          childMetadataItems.result
+            .filter(
+              (childItem) =>
+                this.getObjectNameFromFileName(childItem.fileName) ===
+                metadataItem.fullName
+            )
+            .map((childItem) => ({
+              ...childItem,
+              id: `${metadataItem.type}.${metadataItem.fullName}.${childType}.${childItem.fullName}`
+            }))
+        );
+        childTypeRow.statusIcon = ICONS.complete;
+      }
+
+      return childTypeRow;
+    });
   }
 
   get selectedMetadataRows(): string[] | undefined {
@@ -428,4 +500,5 @@ interface TreeGridMetadataObjectType {
 
 interface TreeGridMetadataItem extends MetadataItem {
   id: string;
+  _children?: TreeGridMetadataObjectType[];
 }

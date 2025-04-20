@@ -1,6 +1,11 @@
 <template>
   <div class="slds-p-around_medium slds-text-color_default">
     <lightning-card title="Metadata Explorer">
+      <lightning-button
+        label="print"
+        slot="actions"
+        onclick={print}
+      ></lightning-button>
       <template lwc:if={renderRetrieve}>
         <lightning-button
           label="Retrieve"
