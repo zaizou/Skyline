@@ -14,7 +14,7 @@ enum ICONS {
 
 const COLUMNS = [
   { label: "Metadata Type", fieldName: "metadataType", sortable: true },
-  { label: "Full Name", fieldName: "fullName", sortable: true },
+  { label: "Full Name", fieldName: "label", sortable: true },
   {
     label: "Last Modified By",
     fieldName: "lastModifiedByName",
@@ -165,6 +165,7 @@ export default class MetadataExplorer extends CliElement {
 
   handleMetadataTypeSelection(event: CustomEvent) {
     const selectedMetadataType = (event.target as HTMLInputElement).value;
+    this.selectedRows = [];
     this.selectedMetadataType = this.metadataTypes?.result.metadataObjects.find(
       (metadataType) => metadataType.xmlName === selectedMetadataType
     );
@@ -317,6 +318,7 @@ export default class MetadataExplorer extends CliElement {
     treeGridMetadataType._children = filteredMetadata.map((metadataItem) => {
       const treeGridMetadataItem: TreeGridMetadataItem = {
         ...metadataItem,
+        label: metadataItem.fullName,
         id: metadataItem.fullName,
         _children: this.getChildMetadataItems(metadataItem)
       };
@@ -353,7 +355,7 @@ export default class MetadataExplorer extends CliElement {
             )
             .map((childItem) => ({
               ...childItem,
-              fullName: childItem.fullName.replace(
+              label: childItem.fullName.replace(
                 `${this.getObjectNameFromFileName(childItem.fileName)}.`,
                 ""
               ),
@@ -498,5 +500,6 @@ interface TreeGridMetadataObjectType {
 
 interface TreeGridMetadataItem extends MetadataItem {
   id: string;
+  label: string;
   _children?: TreeGridMetadataObjectType[];
 }
