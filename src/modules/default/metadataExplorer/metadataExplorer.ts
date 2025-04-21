@@ -8,7 +8,8 @@ const DEFAULT_TIMEZONE = "America/Los_Angeles";
 
 enum ICONS {
   loading = "utility:spinner",
-  complete = "utility:check"
+  complete = "utility:check",
+  empty = "standard:empty"
 }
 
 const COLUMNS = [
@@ -278,14 +279,6 @@ export default class MetadataExplorer extends CliElement {
     return false;
   }
 
-  print() {
-    console.log({ treeGridRows: this.treeGridRows });
-    console.log({
-      selectedMetadataType: JSON.stringify(this.selectedMetadataType)
-    });
-    console.log({ metadataItemsByType: this.metadataItemsByType });
-  }
-
   getObjectNameFromFileName(fileName: string): string {
     const firstSlashIndex = fileName.indexOf("/");
     if (firstSlashIndex === -1) {
@@ -360,10 +353,15 @@ export default class MetadataExplorer extends CliElement {
             )
             .map((childItem) => ({
               ...childItem,
+              fullName: childItem.fullName.replace(
+                `${this.getObjectNameFromFileName(childItem.fileName)}.`,
+                ""
+              ),
               id: `${metadataItem.type}.${metadataItem.fullName}.${childType}.${childItem.fullName}`
             }))
         );
-        childTypeRow.statusIcon = ICONS.complete;
+        childTypeRow.statusIcon =
+          childTypeRow._children.length > 0 ? ICONS.complete : ICONS.empty;
       }
 
       return childTypeRow;
