@@ -176,8 +176,10 @@ export default class MetadataExplorer extends CliElement {
       ELEMENT_IDENTIFIER
     );
     if (this.selectedMetadataType!.childXmlNames) {
-      for (const childMetadataType of this.selectedMetadataType!
-        .childXmlNames) {
+      for (const childMetadataType of this.selectedMetadataType!.childXmlNames.filter(
+        // TODO (#2): Investigate why list view retrieval doesn't always work.
+        (childType) => childType !== "ListView"
+      )) {
         App.sendCommandToTerminal(
           COMMANDS.listMetadataOfType(childMetadataType),
           ELEMENT_IDENTIFIER
@@ -315,15 +317,24 @@ export default class MetadataExplorer extends CliElement {
       (a, b) => a.fullName.localeCompare(b.fullName)
     );
 
-    treeGridMetadataType._children = filteredMetadata.map((metadataItem) => {
-      const treeGridMetadataItem: TreeGridMetadataItem = {
-        ...metadataItem,
-        label: metadataItem.fullName,
-        id: metadataItem.fullName,
-        _children: this.getChildMetadataItems(metadataItem)
-      };
-      return treeGridMetadataItem;
-    });
+    treeGridMetadataType._children = filteredMetadata
+      .map((metadataItem) => {
+        const children = this.getChildMetadataItems(metadataItem);
+        if (
+          this.selectedMetadataType!.childXmlNames.length === 0 ||
+          (children && children.length > 0)
+        ) {
+          const treeGridMetadataItem: TreeGridMetadataItem = {
+            ...metadataItem,
+            label: metadataItem.fullName,
+            id: metadataItem.fullName,
+            _children: children
+          };
+          return treeGridMetadataItem;
+        }
+        return undefined; // Return undefined if children is empty or undefined
+      })
+      .filter(Boolean) as TreeGridMetadataItem[]; // Filter out undefined entries
 
     treeGridMetadataType.statusIcon = ICONS.complete;
     return [treeGridMetadataType];
@@ -336,38 +347,46 @@ export default class MetadataExplorer extends CliElement {
       return undefined;
     }
 
-    return this.selectedMetadataType.childXmlNames.map((childType) => {
-      const childTypeRow: TreeGridMetadataObjectType = {
-        metadataType: childType,
-        id: `${metadataItem.type}.${metadataItem.fullName}.${childType}`,
-        statusIcon: ICONS.loading,
-        _children: []
-      };
+    return this.selectedMetadataType.childXmlNames
+      .map((childType) => {
+        const childTypeRow: TreeGridMetadataObjectType = {
+          metadataType: childType,
+          id: `${metadataItem.type}.${metadataItem.fullName}.${childType}`,
+          statusIcon: ICONS.loading,
+          _children: []
+        };
 
-      const childMetadataItems = this.metadataItemsByType.get(childType);
-      if (childMetadataItems) {
-        childTypeRow._children = this.applyFilters(
-          childMetadataItems.result
-            .filter(
-              (childItem) =>
-                this.getObjectNameFromFileName(childItem.fileName) ===
-                metadataItem.fullName
-            )
-            .map((childItem) => ({
-              ...childItem,
-              label: childItem.fullName.replace(
-                `${this.getObjectNameFromFileName(childItem.fileName)}.`,
-                ""
-              ),
-              id: `${metadataItem.type}.${metadataItem.fullName}.${childType}.${childItem.fullName}`
-            }))
-        );
-        childTypeRow.statusIcon =
-          childTypeRow._children.length > 0 ? ICONS.complete : ICONS.empty;
-      }
+        const childMetadataItems = this.metadataItemsByType.get(childType);
+        if (childMetadataItems) {
+          const filteredChildren = this.applyFilters(
+            childMetadataItems.result
+              .filter(
+                (childItem) =>
+                  this.getObjectNameFromFileName(childItem.fileName) ===
+                  metadataItem.fullName
+              )
+              .map((childItem) => ({
+                ...childItem,
+                label: childItem.fullName.replace(
+                  `${this.getObjectNameFromFileName(childItem.fileName)}.`,
+                  ""
+                ),
+                id: `${metadataItem.type}.${metadataItem.fullName}.${childType}.${childItem.fullName}`
+              }))
+          );
 
-      return childTypeRow;
-    });
+          if (filteredChildren.length > 0) {
+            childTypeRow._children = filteredChildren;
+            childTypeRow.statusIcon = ICONS.complete;
+            return childTypeRow; // Only return if filteredChildren is not empty
+          } else {
+            childTypeRow.statusIcon = ICONS.empty;
+            return; // or return childTypeRow with empty children if that's desired
+          }
+        }
+        return; // or return childTypeRow with empty children or undefined here based on your requirement if childMetadataItems is null
+      })
+      .filter(Boolean) as TreeGridMetadataObjectType[] | undefined; // Filter out undefined entries
   }
 
   get selectedMetadataRows(): string[] | undefined {
