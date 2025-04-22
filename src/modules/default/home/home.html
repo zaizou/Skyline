@@ -1,23 +1,88 @@
 <template>
   <div class="slds-p-around_medium slds-text-color_default">
-    <h1 class="slds-text-heading_large">Welcome to the Development App</h1>
-    <p>This app helps admins and developers streamline their workflow.</p>
+    <h1 class="slds-text-heading_large">System Check</h1>
+    <p>The system is verifying that the following prerequisites are met:</p>
+
+    <lightning-progress-indicator
+      type="base"
+      current-step={currentStep}
+      has-error={hasError}
+      class="slds-p-around_medium"
+    >
+      <lightning-progress-step
+        label="Git"
+        value="git"
+      ></lightning-progress-step>
+      <lightning-progress-step
+        label="Git Directory"
+        value="gitDir"
+      ></lightning-progress-step>
+      <lightning-progress-step
+        label="SF CLI"
+        value="sfCli"
+      ></lightning-progress-step>
+      <template if:true={fullyVerified}>
+        <lightning-progress-step
+          label="complete"
+          value="complete"
+          class="slds-hide"
+        ></lightning-progress-step>
+      </template>
+    </lightning-progress-indicator>
+
+    <lightning-layout horizontal-align="space">
+      <lightning-layout-item padding="around-small">
+        <div class="indicator">
+          <span class="label">Git is installed</span>
+          <template lwc:if={checkingGit}>
+            <div class="slds-is-relative slds-m-left_medium">
+              <lightning-spinner
+                alternative-text="Checking Git"
+                size="small"
+              ></lightning-spinner>
+            </div>
+          </template>
+        </div>
+      </lightning-layout-item>
+
+      <lightning-layout-item padding="around-small">
+        <div class="indicator">
+          <span class="label">Current folder is a Git repository</span>
+          <template lwc:if={checkingInGitDir}>
+            <div class="slds-is-relative slds-m-left_medium">
+              <lightning-spinner
+                alternative-text="Checking Git Directory"
+                size="small"
+              ></lightning-spinner>
+            </div>
+          </template>
+        </div>
+      </lightning-layout-item>
+
+      <lightning-layout-item padding="around-small">
+        <div class="indicator">
+          <span class="label">SF CLI is installed</span>
+          <template lwc:if={checkingSfCli}>
+            <div class="slds-is-relative slds-m-left_medium">
+              <lightning-spinner
+                alternative-text="Checking SF CLI"
+                size="small"
+              ></lightning-spinner>
+            </div>
+          </template>
+        </div>
+      </lightning-layout-item>
+    </lightning-layout>
+
     <template lwc:if={fullyVerified}>
       <p>Congratulations - everything is set up properly!</p>
     </template>
-    <template lwc:else>
-      <h2>System Check</h2>
-      <p>The system is verifying that the following programs are installed:</p>
-      <ul class="slds-list_dotted">
-        <li>Git</li>
-        <li>SF CLI</li>
-      </ul>
-      <template lwc:if={showSpinner}>
-        <lightning-spinner
-          alternative-text="Loading"
-          size="medium"
-        ></lightning-spinner>
-      </template>
+
+    <template lwc:if={errorMessage}>
+      <div class="slds-notify slds-notify_alert slds-alert_error" role="alert">
+        <span class="slds-assistive-text">error</span>
+        <h2>{errorMessage}</h2>
+      </div>
     </template>
   </div>
 </template>

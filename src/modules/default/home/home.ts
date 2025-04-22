@@ -5,6 +5,7 @@ import { ExecuteResult } from "../app/app";
 
 const ERROR_MESSAGES = {
   gitNotInstalled: "Git is not installed on this machine",
+  notInGitDirectory: "The current working directory is not a git repository",
   sfCliNotInstalled: "The sf CLI is not installed on this machine"
 };
 
@@ -14,6 +15,13 @@ const COMMANDS = {
   verifyInCurrentGitDir: "git status"
 };
 
+enum STAGES {
+  git = "git",
+  gitDir = "gitDir",
+  sfCli = "sfCli",
+  complete = "complete"
+}
+
 const ELEMENT_IDENTIFIER = "home";
 
 export default class Home extends CLIElement {
@@ -22,6 +30,8 @@ export default class Home extends CLIElement {
   sfCliInstalled = false;
   inGitDir = false;
   fullyVerified = false;
+  hasError = false;
+  errorMessage?: String;
 
   connectedCallback(): void {
     this.showSpinner = true;
@@ -65,18 +75,56 @@ export default class Home extends CLIElement {
         COMMANDS.verifyInCurrentGitDir,
         ELEMENT_IDENTIFIER
       );
-    }
-  }
-
-  handleSfCliInstalledResult(result: ExecuteResult) {
-    if (result.stdout) {
-      this.sfCliInstalled = true;
+    } else {
+      this.hasError = true;
+      this.errorMessage = ERROR_MESSAGES.gitNotInstalled;
     }
   }
 
   handleInGitDirResult(result: ExecuteResult) {
     if (result.stdout) {
       this.inGitDir = true;
+    } else {
+      this.hasError = true;
+      this.errorMessage = ERROR_MESSAGES.notInGitDirectory;
+    }
+  }
+
+  handleSfCliInstalledResult(result: ExecuteResult) {
+    if (result.stdout) {
+      this.sfCliInstalled = true;
+    } else {
+      this.hasError = true;
+      this.errorMessage = ERROR_MESSAGES.sfCliNotInstalled;
+    }
+  }
+
+  get checkingGit() {
+    return this.showSpinner && !this.gitInstalled;
+  }
+
+  get checkingInGitDir() {
+    return this.showSpinner && this.gitInstalled && !this.inGitDir;
+  }
+
+  get checkingSfCli() {
+    return (
+      this.showSpinner &&
+      this.gitInstalled &&
+      this.inGitDir &&
+      !this.sfCliInstalled
+    );
+  }
+
+  get currentStep() {
+    if (this.fullyVerified) {
+      return STAGES.complete;
+    } else if (!this.gitInstalled) {
+      return STAGES.git;
+    } else if (!this.inGitDir) {
+      return STAGES.gitDir;
+    } else {
+      return STAGES.sfCli;
     }
   }
 }
