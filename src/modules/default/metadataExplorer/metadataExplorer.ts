@@ -8,6 +8,24 @@ const DEFAULT_TIMEZONE = "America/Los_Angeles";
 const CUSTOM_OBJECT = "CustomObject";
 const STANDARD_FIELD = "StandardField";
 
+const SYSTEM_FIELDS = [
+  // SObject system fields
+  "Id",
+  "IsDeleted",
+  "CreatedById",
+  "CreatedDate",
+  "LastModifiedById",
+  "LastModifiedDate",
+  "SystemModstamp",
+  // Custom metadata type specific system fields:
+  "DeveloperName",
+  "MasterLabel",
+  "Language",
+  "NamespacePrefix",
+  "Label",
+  "QualifiedApiName"
+];
+
 enum ICONS {
   loading = "utility:spinner",
   complete = "utility:check",
@@ -461,7 +479,11 @@ export default class MetadataExplorer extends CliElement {
       if (standardFields) {
         result.push(
           ...standardFields.result.records
-            .filter((field) => !field.QualifiedApiName.includes("__"))
+            .filter(
+              (field) =>
+                !field.QualifiedApiName.includes("__") &&
+                !SYSTEM_FIELDS.includes(field.QualifiedApiName)
+            )
             .map((field) => ({
               createdById: "",
               createdByName: "",
@@ -478,7 +500,7 @@ export default class MetadataExplorer extends CliElement {
         );
       }
     }
-
+    result.sort((a, b) => a.fullName.localeCompare(b.fullName));
     return { status: 0, result, warnings: [] };
   }
 
