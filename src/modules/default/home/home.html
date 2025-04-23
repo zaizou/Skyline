@@ -33,7 +33,7 @@
     <lightning-layout horizontal-align="space">
       <lightning-layout-item padding="around-small">
         <div class="indicator">
-          <span class="label">Git is installed</span>
+          <div class="label">Git is installed</div>
           <template lwc:if={checkingGit}>
             <div class="slds-is-relative slds-m-left_medium">
               <lightning-spinner
@@ -47,7 +47,7 @@
 
       <lightning-layout-item padding="around-small">
         <div class="indicator">
-          <span class="label">Current folder is a Git repository</span>
+          <div class="label">Current folder is a Git repository</div>
           <template lwc:if={checkingInGitDir}>
             <div class="slds-is-relative slds-m-left_medium">
               <lightning-spinner
@@ -61,7 +61,7 @@
 
       <lightning-layout-item padding="around-small">
         <div class="indicator">
-          <span class="label">SF CLI is installed</span>
+          <div class="label">SF CLI is installed</div>
           <template lwc:if={checkingSfCli}>
             <div class="slds-is-relative slds-m-left_medium">
               <lightning-spinner

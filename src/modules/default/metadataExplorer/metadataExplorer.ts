@@ -5,6 +5,8 @@ import CliElement from "../cliElement/cliElement";
 
 const ELEMENT_IDENTIFIER = "metadataExplorer";
 const DEFAULT_TIMEZONE = "America/Los_Angeles";
+const CUSTOM_OBJECT = "CustomObject";
+const STANDARD_FIELD = "StandardField";
 
 enum ICONS {
   loading = "utility:spinner",
@@ -44,7 +46,8 @@ const COMMAND_PREFIX = {
   sfOrgDisplay: "sf org display --json",
   sfOrgListMetadataTypes: "sf org list metadata-types --json",
   sfOrgListMetadata: "sf org list metadata --metadata-type",
-  sfProjectRetrieveStart: "sf project retrieve start"
+  sfProjectRetrieveStart: "sf project retrieve start",
+  sfDataQueryFields: `sf data query --query "SELECT QualifiedApiName, LastModifiedDate FROM FieldDefinition WHERE EntityDefinition.QualifiedApiName IN `
 };
 
 const COMMANDS = {
@@ -60,6 +63,11 @@ const COMMANDS = {
     return `${COMMAND_PREFIX.sfProjectRetrieveStart}${metadataStatements.join(
       " "
     )} --ignore-conflicts --json`;
+  },
+  queryFields: (sObjectApiNames: string[]) => {
+    return `${COMMAND_PREFIX.sfDataQueryFields} (${sObjectApiNames.join(
+      ", "
+    )})" --json`;
   }
 };
 
@@ -83,6 +91,11 @@ export default class MetadataExplorer extends CliElement {
   @track selectedMetadataType?: MetadataObjectType;
   @track retrieveMetadataResult?: RetrieveMetadataResponse;
   @track metadataItemsByType = new Map<string, ListMetadataOfTypeResponse>();
+  @track standardFieldsBySObjectApiName = new Map<
+    string,
+    FieldDefinitionResponse
+  >();
+  @track currentSObjectApiName?: string;
   @track processedMetadataTypes: string[] = [];
 
   connectedCallback(): void {
@@ -107,6 +120,9 @@ export default class MetadataExplorer extends CliElement {
     if (command.startsWith(COMMAND_PREFIX.sfProjectRetrieveStart)) {
       this.handleMetadataRetrieve(result);
       return;
+    }
+    if (command.startsWith(COMMAND_PREFIX.sfDataQueryFields)) {
+      this.handleFieldQuery(result);
     }
   }
 
@@ -146,6 +162,14 @@ export default class MetadataExplorer extends CliElement {
     this.showSpinner = false;
   }
 
+  getSObjectApiNames(): string[] {
+    return (
+      this.metadataItemsByType
+        .get(CUSTOM_OBJECT)
+        ?.result.map((sObject) => sObject.fullName) ?? []
+    );
+  }
+
   extractMetadataType(command: string): string | undefined {
     const metadataPrefixRegex = new RegExp(
       COMMAND_PREFIX.sfOrgListMetadata + "\\s+(\\w+)"
@@ -161,6 +185,38 @@ export default class MetadataExplorer extends CliElement {
 
   handleMetadataRetrieve(result: ExecuteResult) {
     this.showSpinner = false;
+  }
+
+  handleToggle(event: CustomEvent) {
+    const sObjectApiName = event.detail.name;
+    if (
+      this.selectedMetadataType?.xmlName !== CUSTOM_OBJECT ||
+      !this.getSObjectApiNames().includes(sObjectApiName)
+    ) {
+      return;
+    }
+    this.showSpinner = true;
+    this.currentSObjectApiName = sObjectApiName;
+    App.sendCommandToTerminal(
+      COMMANDS.queryFields([`'${sObjectApiName}'`]),
+      ELEMENT_IDENTIFIER
+    );
+  }
+
+  handleFieldQuery(result: ExecuteResult) {
+    this.showSpinner = false;
+    if (result.stderr) {
+      this.error = result.stderr;
+      return;
+    }
+    if (result.stdout) {
+      const queryResult: FieldDefinitionResponse = JSON.parse(result.stdout);
+      this.standardFieldsBySObjectApiName.set(
+        this.currentSObjectApiName!,
+        queryResult
+      );
+      this.currentSObjectApiName = undefined;
+    }
   }
 
   handleMetadataTypeSelection(event: CustomEvent) {
@@ -185,6 +241,9 @@ export default class MetadataExplorer extends CliElement {
           ELEMENT_IDENTIFIER
         );
       }
+    }
+    if (this.selectedMetadataType!.xmlName === CUSTOM_OBJECT) {
+      this.selectedMetadataType!.childXmlNames.push(STANDARD_FIELD);
     }
   }
 
@@ -322,7 +381,8 @@ export default class MetadataExplorer extends CliElement {
         const children = this.getChildMetadataItems(metadataItem);
         if (
           this.selectedMetadataType!.childXmlNames.length === 0 ||
-          (children && children.length > 0)
+          (children && children.length > 0) ||
+          this.selectedMetadataType!.xmlName === CUSTOM_OBJECT
         ) {
           const treeGridMetadataItem: TreeGridMetadataItem = {
             ...metadataItem,
@@ -332,9 +392,9 @@ export default class MetadataExplorer extends CliElement {
           };
           return treeGridMetadataItem;
         }
-        return undefined; // Return undefined if children is empty or undefined
+        return undefined;
       })
-      .filter(Boolean) as TreeGridMetadataItem[]; // Filter out undefined entries
+      .filter(Boolean) as TreeGridMetadataItem[];
 
     treeGridMetadataType.statusIcon = ICONS.complete;
     return [treeGridMetadataType];
@@ -356,7 +416,11 @@ export default class MetadataExplorer extends CliElement {
           _children: []
         };
 
-        const childMetadataItems = this.metadataItemsByType.get(childType);
+        const childMetadataItems =
+          childType === STANDARD_FIELD
+            ? this.standardFieldMetadataItems
+            : this.metadataItemsByType.get(childType);
+
         if (childMetadataItems) {
           const filteredChildren = this.applyFilters(
             childMetadataItems.result
@@ -378,15 +442,44 @@ export default class MetadataExplorer extends CliElement {
           if (filteredChildren.length > 0) {
             childTypeRow._children = filteredChildren;
             childTypeRow.statusIcon = ICONS.complete;
-            return childTypeRow; // Only return if filteredChildren is not empty
+            return childTypeRow;
           } else {
             childTypeRow.statusIcon = ICONS.empty;
-            return; // or return childTypeRow with empty children if that's desired
+            return;
           }
         }
-        return; // or return childTypeRow with empty children or undefined here based on your requirement if childMetadataItems is null
+        return;
       })
-      .filter(Boolean) as TreeGridMetadataObjectType[] | undefined; // Filter out undefined entries
+      .filter(Boolean) as TreeGridMetadataObjectType[] | undefined;
+  }
+
+  get standardFieldMetadataItems(): ListMetadataOfTypeResponse {
+    const result: MetadataItem[] = [];
+
+    for (const [sObjectApiName, standardFields] of this
+      .standardFieldsBySObjectApiName) {
+      if (standardFields) {
+        result.push(
+          ...standardFields.result.records
+            .filter((field) => !field.QualifiedApiName.includes("__"))
+            .map((field) => ({
+              createdById: "",
+              createdByName: "",
+              createdDate: "",
+              fileName: `/${sObjectApiName}.`,
+              fullName: `${sObjectApiName}.${field.QualifiedApiName}`,
+              id: "",
+              lastModifiedById: "",
+              lastModifiedByName: "",
+              lastModifiedDate: field.LastModifiedDate!,
+              manageableState: "",
+              type: "CustomField"
+            }))
+        );
+      }
+    }
+
+    return { status: 0, result, warnings: [] };
   }
 
   get selectedMetadataRows(): string[] | undefined {
@@ -521,4 +614,29 @@ interface TreeGridMetadataItem extends MetadataItem {
   id: string;
   label: string;
   _children?: TreeGridMetadataObjectType[];
+}
+
+interface FieldDefinitionAttribute {
+  type: string;
+  url: string;
+}
+
+interface FieldDefinitionRecord {
+  attributes: FieldDefinitionAttribute;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  QualifiedApiName: string;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  LastModifiedDate: string | null;
+}
+
+interface FieldDefinitionResult {
+  records: FieldDefinitionRecord[];
+  totalSize: number;
+  done: boolean;
+}
+
+interface FieldDefinitionResponse {
+  status: number;
+  result: FieldDefinitionResult;
+  warnings: any[]; // Or a more specific type if the structure of warnings is known.
 }
