@@ -1,5 +1,23 @@
 import { ExecuteResult } from "../app/app";
 import { track, api } from "lwc";
+import {
+  SalesforceConnectionInfo,
+  ListMetadataTypesResponse,
+  MetadataObjectType,
+  ListMetadataOfTypeResponse,
+  RetrieveMetadataResponse,
+  FieldDefinitionResponse,
+  COMMAND_PREFIX,
+  COMMANDS
+} from "./sfCli";
+import {
+  ICONS,
+  COLUMNS,
+  TableRow,
+  convertMetadataObjectTypeToTableRow,
+  convertMetadataItemToTableRow,
+  convertFieldDefinitionRecordToTableRow
+} from "./table";
 import App from "../app/app";
 import CliElement from "../cliElement/cliElement";
 
@@ -7,6 +25,7 @@ const ELEMENT_IDENTIFIER = "metadataExplorer";
 const DEFAULT_TIMEZONE = "America/Los_Angeles";
 const CUSTOM_OBJECT = "CustomObject";
 const STANDARD_FIELD = "StandardField";
+const LAST_MODIFIED_DATE = "lastModifiedDate";
 
 const SYSTEM_FIELDS = [
   // SObject system fields
@@ -16,6 +35,11 @@ const SYSTEM_FIELDS = [
   "CreatedDate",
   "LastModifiedById",
   "LastModifiedDate",
+  "LastActivityDate",
+  "LastViewedDate",
+  "LastReferencedDate",
+  "MasterRecordId",
+  "UserRecordAccessId",
   "SystemModstamp",
   // Custom metadata type specific system fields:
   "DeveloperName",
@@ -26,73 +50,10 @@ const SYSTEM_FIELDS = [
   "QualifiedApiName"
 ];
 
-enum ICONS {
-  loading = "utility:spinner",
-  complete = "utility:check",
-  empty = "standard:empty"
-}
-
-const COLUMNS = [
-  { label: "Metadata Type", fieldName: "metadataType", sortable: true },
-  { label: "Full Name", fieldName: "label", sortable: true },
-  {
-    label: "Last Modified By",
-    fieldName: "lastModifiedByName",
-    sortable: true
-  },
-  {
-    label: "Last Modified Date",
-    fieldName: "lastModifiedDate",
-    type: "date",
-    typeAttributes: {
-      year: "numeric",
-      month: "long",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit"
-    },
-    sortable: true
-  },
-  {
-    fieldName: "status",
-    label: "Status",
-    cellAttributes: { iconName: { fieldName: "statusIcon" } }
-  }
-];
-
-const COMMAND_PREFIX = {
-  sfOrgDisplay: "sf org display --json",
-  sfOrgListMetadataTypes: "sf org list metadata-types --json",
-  sfOrgListMetadata: "sf org list metadata --metadata-type",
-  sfProjectRetrieveStart: "sf project retrieve start",
-  sfDataQueryFields: `sf data query --query "SELECT QualifiedApiName, LastModifiedDate FROM FieldDefinition WHERE EntityDefinition.QualifiedApiName IN `
-};
-
-const COMMANDS = {
-  orgDisplay: COMMAND_PREFIX.sfOrgDisplay,
-  listMetadataTypes: COMMAND_PREFIX.sfOrgListMetadataTypes,
-  listMetadataOfType: (selectedMetadataType: string): string =>
-    `${COMMAND_PREFIX.sfOrgListMetadata} ${selectedMetadataType} --json`,
-  retrieveMetadata: (selectedMetadataRows: string[]) => {
-    const metadataStatements: string[] = [];
-    for (const row of selectedMetadataRows) {
-      metadataStatements.push(` --metadata "${row}"`);
-    }
-    return `${COMMAND_PREFIX.sfProjectRetrieveStart}${metadataStatements.join(
-      " "
-    )} --ignore-conflicts --json`;
-  },
-  queryFields: (sObjectApiNames: string[]) => {
-    return `${COMMAND_PREFIX.sfDataQueryFields} (${sObjectApiNames.join(
-      ", "
-    )})" --json`;
-  }
-};
-
 export default class MetadataExplorer extends CliElement {
   renderDropdownOptions = false;
   columns = COLUMNS;
-  sortedBy = "lastModifiedDate";
+  sortedBy = LAST_MODIFIED_DATE;
 
   @track filterState = false;
   @track searchTermComponentName?: string;
@@ -101,7 +62,7 @@ export default class MetadataExplorer extends CliElement {
   @track searchTermTo?: string;
   @track selectedTimeZone?: string = DEFAULT_TIMEZONE;
 
-  @track selectedRows?: TreeGridMetadataItem[];
+  @track selectedRows?: TableRow[];
   @track error?: string;
   @track showSpinner = true;
   @track orgConnectionInfo?: SalesforceConnectionInfo;
@@ -119,6 +80,8 @@ export default class MetadataExplorer extends CliElement {
   connectedCallback(): void {
     App.sendCommandToTerminal(COMMANDS.orgDisplay, ELEMENT_IDENTIFIER);
   }
+
+  //  ▂▃▄▅▆▇█▓▒░ Public Methods ░▒▓█▇▆▅▄▃▂
 
   @api
   handleExecuteResult(result: ExecuteResult) {
@@ -139,71 +102,13 @@ export default class MetadataExplorer extends CliElement {
       this.handleMetadataRetrieve(result);
       return;
     }
-    if (command.startsWith(COMMAND_PREFIX.sfDataQueryFields)) {
+    if (command.startsWith(COMMAND_PREFIX.sfDataQueryFieldDefinitions)) {
       this.handleFieldQuery(result);
+      return;
     }
   }
 
-  handleOrgDisplay(result: ExecuteResult) {
-    if (result.stdout) {
-      this.orgConnectionInfo = JSON.parse(result.stdout);
-      App.sendCommandToTerminal(COMMANDS.listMetadataTypes, ELEMENT_IDENTIFIER);
-    } else if (result.stderr) {
-      this.error = result.stderr;
-    }
-  }
-
-  handleMetadataTypes(result: ExecuteResult) {
-    if (result.stdout) {
-      this.metadataTypes = JSON.parse(result.stdout);
-    } else if (result.stderr) {
-      this.error = result.stderr;
-    }
-    this.showSpinner = false;
-  }
-
-  handleMetadataOfType(result: ExecuteResult) {
-    if (result.stdout) {
-      const selectedMetadataType = this.extractMetadataType(result.command);
-      if (!selectedMetadataType) {
-        return;
-      }
-      this.processedMetadataTypes.push(selectedMetadataType);
-      const metadataOfSelectedType = JSON.parse(result.stdout);
-      this.metadataItemsByType.set(
-        selectedMetadataType,
-        metadataOfSelectedType
-      );
-    } else if (result.stderr) {
-      this.error = result.stderr;
-    }
-    this.showSpinner = false;
-  }
-
-  getSObjectApiNames(): string[] {
-    return (
-      this.metadataItemsByType
-        .get(CUSTOM_OBJECT)
-        ?.result.map((sObject) => sObject.fullName) ?? []
-    );
-  }
-
-  extractMetadataType(command: string): string | undefined {
-    const metadataPrefixRegex = new RegExp(
-      COMMAND_PREFIX.sfOrgListMetadata + "\\s+(\\w+)"
-    );
-    const match = command.match(metadataPrefixRegex);
-
-    if (match && match.length > 1) {
-      return match[1];
-    }
-
-    return undefined;
-  }
-
-  handleMetadataRetrieve(result: ExecuteResult) {
-    this.showSpinner = false;
-  }
+  //  ▂▃▄▅▆▇█▓▒░ Event Handlers ░▒▓█▇▆▅▄▃▂
 
   handleToggle(event: CustomEvent) {
     const sObjectApiName = event.detail.name;
@@ -216,34 +121,17 @@ export default class MetadataExplorer extends CliElement {
     this.showSpinner = true;
     this.currentSObjectApiName = sObjectApiName;
     App.sendCommandToTerminal(
-      COMMANDS.queryFields([`'${sObjectApiName}'`]),
+      COMMANDS.queryFieldDefinitions([`'${sObjectApiName}'`]),
       ELEMENT_IDENTIFIER
     );
   }
 
-  handleFieldQuery(result: ExecuteResult) {
-    this.showSpinner = false;
-    if (result.stderr) {
-      this.error = result.stderr;
-      return;
-    }
-    if (result.stdout) {
-      const queryResult: FieldDefinitionResponse = JSON.parse(result.stdout);
-      this.standardFieldsBySObjectApiName.set(
-        this.currentSObjectApiName!,
-        queryResult
-      );
-      this.currentSObjectApiName = undefined;
-    }
-  }
-
   handleMetadataTypeSelection(event: CustomEvent) {
+    this.resetMetadataItems();
     const selectedMetadataType = (event.target as HTMLInputElement).value;
-    this.selectedRows = [];
     this.selectedMetadataType = this.metadataTypes?.result.metadataObjects.find(
       (metadataType) => metadataType.xmlName === selectedMetadataType
     );
-    this.renderDropdownOptions = false;
     this.showSpinner = true;
     App.sendCommandToTerminal(
       COMMANDS.listMetadataOfType(this.selectedMetadataType!.xmlName),
@@ -260,7 +148,11 @@ export default class MetadataExplorer extends CliElement {
         );
       }
     }
-    if (this.selectedMetadataType!.xmlName === CUSTOM_OBJECT) {
+    if (
+      this.selectedMetadataType!.xmlName === CUSTOM_OBJECT &&
+      this.selectedMetadataType?.childXmlNames &&
+      !this.selectedMetadataType.childXmlNames.includes(STANDARD_FIELD)
+    ) {
       this.selectedMetadataType!.childXmlNames.push(STANDARD_FIELD);
     }
   }
@@ -311,15 +203,107 @@ export default class MetadataExplorer extends CliElement {
     this.selectedTimeZone = DEFAULT_TIMEZONE;
   }
 
-  applyFilters(metadataItems: MetadataItem[]): MetadataItem[] {
-    metadataItems = this.applyComponentNameFilters(metadataItems);
-    metadataItems = this.applyLastModifiedDateFilters(metadataItems);
-    return metadataItems;
+  //  ▂▃▄▅▆▇█▓▒░ Private Methods ░▒▓█▇▆▅▄▃▂
+
+  private resetMetadataItems() {
+    this.renderDropdownOptions = false;
+    this.selectedRows = undefined;
+    this.selectedMetadataType = undefined;
+    this.retrieveMetadataResult = undefined;
+    this.metadataItemsByType = new Map<string, ListMetadataOfTypeResponse>();
+    this.standardFieldsBySObjectApiName = new Map<
+      string,
+      FieldDefinitionResponse
+    >();
+    this.currentSObjectApiName = undefined;
   }
 
-  applyLastModifiedDateFilters(metadataItems: MetadataItem[]): MetadataItem[] {
+  private handleOrgDisplay(result: ExecuteResult) {
+    if (result.stdout) {
+      this.orgConnectionInfo = JSON.parse(result.stdout);
+      App.sendCommandToTerminal(COMMANDS.listMetadataTypes, ELEMENT_IDENTIFIER);
+    } else if (result.stderr) {
+      this.error = result.stderr;
+    }
+  }
+
+  private handleMetadataTypes(result: ExecuteResult) {
+    if (result.stdout) {
+      this.metadataTypes = JSON.parse(result.stdout);
+    } else if (result.stderr) {
+      this.error = result.stderr;
+    }
+    this.showSpinner = false;
+  }
+
+  private handleMetadataOfType(result: ExecuteResult) {
+    if (result.stdout) {
+      const selectedMetadataType = this.extractMetadataType(result.command);
+      if (!selectedMetadataType) {
+        return;
+      }
+      this.processedMetadataTypes.push(selectedMetadataType);
+      const metadataOfSelectedType = JSON.parse(result.stdout);
+      this.metadataItemsByType.set(
+        selectedMetadataType,
+        metadataOfSelectedType
+      );
+    } else if (result.stderr) {
+      this.error = result.stderr;
+    }
+    this.showSpinner = false;
+  }
+
+  private getSObjectApiNames(): string[] {
+    return (
+      this.metadataItemsByType
+        .get(CUSTOM_OBJECT)
+        ?.result.map((sObject) => sObject.fullName) ?? []
+    );
+  }
+
+  private extractMetadataType(command: string): string | undefined {
+    const metadataPrefixRegex = new RegExp(
+      COMMAND_PREFIX.sfOrgListMetadata + "\\s+(\\w+)"
+    );
+    const match = command.match(metadataPrefixRegex);
+
+    if (match && match.length > 1) {
+      return match[1];
+    }
+
+    return undefined;
+  }
+
+  private handleMetadataRetrieve(result: ExecuteResult) {
+    this.showSpinner = false;
+  }
+
+  private handleFieldQuery(result: ExecuteResult) {
+    this.showSpinner = false;
+    if (result.stderr) {
+      this.error = result.stderr;
+      return;
+    }
+    if (result.stdout) {
+      const queryResult = JSON.parse(result.stdout);
+      this.standardFieldsBySObjectApiName.set(
+        this.currentSObjectApiName!,
+        queryResult
+      );
+      this.currentSObjectApiName = undefined;
+    }
+  }
+
+  private applyTableRowFilters(rows: TableRow[]): TableRow[] {
+    rows = this.applyLastModifiedDateRowFilter(rows);
+    rows = this.applyComponentNameTableRowFilter(rows);
+    return rows;
+  }
+
+  private applyLastModifiedDateRowFilter(rows: TableRow[]): TableRow[] {
     if (!this.searchTermFrom && !this.searchTermTo) {
-      return metadataItems;
+      return rows;
     }
 
     const from = this.searchTermFrom
@@ -327,24 +311,27 @@ export default class MetadataExplorer extends CliElement {
       : undefined;
     const to = this.searchTermTo ? new Date(this.searchTermTo) : undefined;
 
-    return metadataItems.filter((item) => {
-      const lastModifiedDate = new Date(item.lastModifiedDate);
+    return rows.filter((row) => {
+      if (!row.lastModifiedDate) {
+        return true;
+      }
+      const lastModifiedDate = new Date(row.lastModifiedDate);
       return (
         (!from || lastModifiedDate >= from) && (!to || lastModifiedDate <= to)
       );
     });
   }
 
-  applyComponentNameFilters(metadataItems: MetadataItem[]): MetadataItem[] {
+  private applyComponentNameTableRowFilter(rows: TableRow[]): TableRow[] {
     if (!this.searchTermComponentName) {
-      return metadataItems;
+      return rows;
     }
-    return metadataItems.filter((metadataItem) =>
-      this.fuzzyMatch(metadataItem.fullName, this.searchTermComponentName!)
+    return rows.filter((row) =>
+      this.fuzzyMatch(row.fullName!, this.searchTermComponentName!)
     );
   }
 
-  fuzzyMatch(str: string, pattern: string): boolean {
+  private fuzzyMatch(str: string, pattern: string): boolean {
     pattern = pattern.toLowerCase();
     str = str.toLowerCase();
     let patternIdx = 0;
@@ -359,149 +346,125 @@ export default class MetadataExplorer extends CliElement {
     return false;
   }
 
-  getObjectNameFromFileName(fileName: string): string {
-    const firstSlashIndex = fileName.indexOf("/");
-    if (firstSlashIndex === -1) {
-      return ""; // Or handle this case as needed, maybe return fileName?
-    }
-    const firstDotAfterSlashIndex = fileName.indexOf(".", firstSlashIndex + 1);
-    if (firstDotAfterSlashIndex === -1) {
-      return fileName.substring(firstSlashIndex + 1);
-    }
-    return fileName.substring(firstSlashIndex + 1, firstDotAfterSlashIndex);
-  }
-
-  get treeGridRows(): TreeGridMetadataObjectType[] | undefined {
-    if (!this.selectedMetadataType) {
-      return undefined;
-    }
-
-    const treeGridMetadataType: TreeGridMetadataObjectType = {
-      metadataType: this.selectedMetadataType.xmlName,
-      id: this.selectedMetadataType.xmlName,
-      statusIcon: ICONS.loading,
-      _children: []
-    };
-
-    const metadataItems = this.metadataItemsByType.get(
-      this.selectedMetadataType.xmlName
-    );
-    if (!metadataItems) {
-      return [treeGridMetadataType];
-    }
-
-    const filteredMetadata = this.applyFilters(metadataItems.result).sort(
-      (a, b) => a.fullName.localeCompare(b.fullName)
-    );
-
-    treeGridMetadataType._children = filteredMetadata
-      .map((metadataItem) => {
-        const children = this.getChildMetadataItems(metadataItem);
-        if (
-          this.selectedMetadataType!.childXmlNames.length === 0 ||
-          (children && children.length > 0) ||
-          this.selectedMetadataType!.xmlName === CUSTOM_OBJECT
-        ) {
-          const treeGridMetadataItem: TreeGridMetadataItem = {
-            ...metadataItem,
-            label: metadataItem.fullName,
-            id: metadataItem.fullName,
-            _children: children
-          };
-          return treeGridMetadataItem;
-        }
-        return undefined;
-      })
-      .filter(Boolean) as TreeGridMetadataItem[];
-
-    treeGridMetadataType.statusIcon = ICONS.complete;
-    return [treeGridMetadataType];
-  }
-
-  private getChildMetadataItems(
-    metadataItem: MetadataItem
-  ): TreeGridMetadataObjectType[] | undefined {
+  private getChildMetadataTableRows(
+    metadataItem: TableRow
+  ): TableRow[] | undefined {
     if (!this.selectedMetadataType?.childXmlNames) {
       return undefined;
     }
 
-    return this.selectedMetadataType.childXmlNames
-      .map((childType) => {
-        const childTypeRow: TreeGridMetadataObjectType = {
-          metadataType: childType,
-          id: `${metadataItem.type}.${metadataItem.fullName}.${childType}`,
-          statusIcon: ICONS.loading,
-          _children: []
-        };
+    const result: TableRow[] = this.selectedMetadataType.childXmlNames.flatMap(
+      (childType) => {
+        const childTypeRow = this.createChildTypeRow(metadataItem, childType);
+        const childMetadataItemRows = this.getChildMetadataItemRows(
+          metadataItem,
+          childType
+        );
 
-        const childMetadataItems =
-          childType === STANDARD_FIELD
-            ? this.standardFieldMetadataItems
-            : this.metadataItemsByType.get(childType);
-
-        if (childMetadataItems) {
-          const filteredChildren = this.applyFilters(
-            childMetadataItems.result
-              .filter(
-                (childItem) =>
-                  this.getObjectNameFromFileName(childItem.fileName) ===
-                  metadataItem.fullName
-              )
-              .map((childItem) => ({
-                ...childItem,
-                label: childItem.fullName.replace(
-                  `${this.getObjectNameFromFileName(childItem.fileName)}.`,
-                  ""
-                ),
-                id: `${metadataItem.type}.${metadataItem.fullName}.${childType}.${childItem.fullName}`
-              }))
-          );
-
-          if (filteredChildren.length > 0) {
-            childTypeRow._children = filteredChildren;
-            childTypeRow.statusIcon = ICONS.complete;
-            return childTypeRow;
-          } else {
-            childTypeRow.statusIcon = ICONS.empty;
-            return;
-          }
+        if (childMetadataItemRows && childMetadataItemRows.length > 0) {
+          childTypeRow._children = childMetadataItemRows;
+          childTypeRow.statusIcon = ICONS.complete;
+          return childTypeRow;
         }
-        return;
-      })
-      .filter(Boolean) as TreeGridMetadataObjectType[] | undefined;
+
+        return [];
+      }
+    );
+
+    return result.length > 0 ? result : undefined;
   }
 
-  get standardFieldMetadataItems(): ListMetadataOfTypeResponse {
-    const result: MetadataItem[] = [];
+  private createChildTypeRow(
+    metadataItem: TableRow,
+    childType: string
+  ): TableRow {
+    return {
+      id: `${metadataItem.fullName}.${childType}`,
+      metadataType: childType,
+      statusIcon: ICONS.loading,
+      _children: []
+    };
+  }
 
-    for (const [sObjectApiName, standardFields] of this
-      .standardFieldsBySObjectApiName) {
-      if (standardFields) {
-        result.push(
-          ...standardFields.result.records
-            .filter(
-              (field) =>
-                !field.QualifiedApiName.includes("__") &&
-                !SYSTEM_FIELDS.includes(field.QualifiedApiName)
-            )
-            .map((field) => ({
-              createdById: "",
-              createdByName: "",
-              createdDate: "",
-              fileName: `/${sObjectApiName}.`,
-              fullName: `${sObjectApiName}.${field.QualifiedApiName}`,
-              id: "",
-              lastModifiedById: "",
-              lastModifiedByName: "",
-              lastModifiedDate: field.LastModifiedDate!,
-              manageableState: "",
-              type: "CustomField"
-            }))
-        );
-      }
+  private getChildMetadataItemRows(
+    metadataItem: TableRow,
+    childType: string
+  ): TableRow[] | undefined {
+    if (childType === STANDARD_FIELD) {
+      return this.getStandardFieldRows(metadataItem);
+    } else {
+      return this.getOtherChildMetadataRows(metadataItem, childType);
     }
-    result.sort((a, b) => a.fullName.localeCompare(b.fullName));
-    return { status: 0, result, warnings: [] };
+  }
+
+  private getStandardFieldRows(metadataItem: TableRow): TableRow[] | undefined {
+    const standardFields = this.standardFieldsBySObjectApiName.get(
+      metadataItem.fullName!
+    );
+    if (!standardFields) {
+      return undefined;
+    }
+
+    return standardFields.result.records
+      .map((field) =>
+        convertFieldDefinitionRecordToTableRow(metadataItem.fullName!, field)
+      )
+      .filter(
+        (record) =>
+          record.label &&
+          !SYSTEM_FIELDS.includes(record.label) &&
+          !record.label.includes("__")
+      )
+      .sort((a, b) => a.label!.localeCompare(b.label!));
+  }
+
+  private getOtherChildMetadataRows(
+    metadataItem: TableRow,
+    childType: string
+  ): TableRow[] | undefined {
+    const childMetadataItems = this.metadataItemsByType.get(childType);
+    if (!childMetadataItems) {
+      return undefined;
+    }
+
+    return this.applyTableRowFilters(
+      childMetadataItems.result.map((item) =>
+        convertMetadataItemToTableRow(item)
+      )
+    )
+      .filter((item) => item.sObjectApiName === metadataItem.fullName)
+      .sort((a, b) => a.fullName!.localeCompare(b.fullName!));
+  }
+
+  private createChildRows(
+    metadataItems: ListMetadataOfTypeResponse
+  ): TableRow[] {
+    return this.applyTableRowFilters(
+      metadataItems.result.map((item) => convertMetadataItemToTableRow(item))
+    )
+      .sort((a, b) => a.fullName!.localeCompare(b.fullName!))
+      .map((child) => ({
+        ...child,
+        _children: this.getChildMetadataTableRows(child)
+      }));
+  }
+
+  //  ▂▃▄▅▆▇█▓▒░ Getters ░▒▓█▇▆▅▄▃▂
+
+  get rows(): TableRow[] | undefined {
+    if (!this.selectedMetadataType) {
+      return undefined;
+    }
+    const metadataItems = this.metadataItemsByType.get(
+      this.selectedMetadataType.xmlName
+    );
+    return [
+      {
+        ...convertMetadataObjectTypeToTableRow(this.selectedMetadataType),
+        statusIcon: metadataItems ? ICONS.complete : ICONS.loading,
+        _children: metadataItems ? this.createChildRows(metadataItems) : []
+      }
+    ];
   }
 
   get selectedMetadataRows(): string[] | undefined {
@@ -522,143 +485,8 @@ export default class MetadataExplorer extends CliElement {
       .map((mType) => ({ label: mType.xmlName, value: mType.xmlName }))
       .sort((a, b) => a.label.localeCompare(b.label));
   }
-}
 
-interface SalesforceConnectionInfo {
-  status: number;
-  result: {
-    id: string;
-    devHubId: string;
-    apiVersion: string;
-    accessToken: string;
-    instanceUrl: string;
-    username: string;
-    clientId: string;
-    status: string;
-    expirationDate: string;
-    createdBy: string;
-    edition: string;
-    orgName: string;
-    createdDate: string;
-    signupUsername: string;
-    alias: string;
-  };
-  warnings: string[];
-}
-
-interface MetadataObjectType {
-  directoryName: string;
-  inFolder: boolean;
-  metaFile: boolean;
-  suffix: string;
-  xmlName: string;
-  childXmlNames: string[];
-}
-
-interface MetadataResult {
-  metadataObjects: MetadataObjectType[];
-  organizationNamespace: string;
-  partialSaveAllowed: boolean;
-  testRequired: boolean;
-}
-
-interface ListMetadataTypesResponse {
-  status: number;
-  result: MetadataResult;
-  warnings: string[];
-}
-
-interface MetadataItem {
-  createdById: string;
-  createdByName: string;
-  createdDate: string;
-  fileName: string;
-  fullName: string;
-  id: string;
-  lastModifiedById: string;
-  lastModifiedByName: string;
-  lastModifiedDate: string;
-  manageableState: string;
-  type: string;
-}
-
-interface ListMetadataOfTypeResponse {
-  status: number;
-  result: MetadataItem[];
-  warnings: string[];
-}
-
-interface FileProperty {
-  createdById: string;
-  createdByName: string;
-  createdDate: string;
-  fileName: string;
-  fullName: string;
-  id: string;
-  lastModifiedById: string;
-  lastModifiedByName: string;
-  lastModifiedDate: string;
-  manageableState: string;
-  type: string;
-}
-
-interface File {
-  fullName: string;
-  type: string;
-  state: string;
-  filePath: string;
-}
-
-interface Result {
-  done: boolean;
-  fileProperties: FileProperty[];
-  id: string;
-  status: string;
-  success: boolean;
-  messages: any[];
-  files: File[];
-}
-
-interface RetrieveMetadataResponse {
-  status: number;
-  result: Result;
-  warnings: string[];
-}
-
-interface TreeGridMetadataObjectType {
-  metadataType: string;
-  id: string;
-  _children?: MetadataItem[];
-  statusIcon?: string;
-}
-
-interface TreeGridMetadataItem extends MetadataItem {
-  id: string;
-  label: string;
-  _children?: TreeGridMetadataObjectType[];
-}
-
-interface FieldDefinitionAttribute {
-  type: string;
-  url: string;
-}
-
-interface FieldDefinitionRecord {
-  attributes: FieldDefinitionAttribute;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  QualifiedApiName: string;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  LastModifiedDate: string | null;
-}
-
-interface FieldDefinitionResult {
-  records: FieldDefinitionRecord[];
-  totalSize: number;
-  done: boolean;
-}
-
-interface FieldDefinitionResponse {
-  status: number;
-  result: FieldDefinitionResult;
-  warnings: any[]; // Or a more specific type if the structure of warnings is known.
+  get selectedMetadataTypeValue(): string | undefined {
+    return this.selectedMetadataType?.xmlName;
+  }
 }
