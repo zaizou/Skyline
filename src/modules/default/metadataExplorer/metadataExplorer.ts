@@ -8,6 +8,7 @@
  */
 import { ExecuteResult } from "../app/app";
 import { track, api } from "lwc";
+import Toast from "lightning-base-components/src/lightning/toast/toast.js";
 import {
   SalesforceConnectionInfo,
   ListMetadataTypesResponse,
@@ -62,6 +63,7 @@ export default class MetadataExplorer extends CliElement {
   renderDropdownOptions = false;
   columns = COLUMNS;
   sortedBy = LAST_MODIFIED_DATE;
+  refreshView = false;
 
   @track filterState = false;
   @track searchTermComponentName?: string;
@@ -72,7 +74,7 @@ export default class MetadataExplorer extends CliElement {
 
   @track selectedRows?: TableRow[];
   @track error?: string;
-  @track showSpinner = true;
+  @track spinnerMessages = new Set<string>();
   @track orgConnectionInfo?: SalesforceConnectionInfo;
   @track metadataTypes?: ListMetadataTypesResponse;
   @track selectedMetadataType?: MetadataObjectType;
@@ -90,7 +92,7 @@ export default class MetadataExplorer extends CliElement {
    * Retrieves the org connection information.
    */
   connectedCallback(): void {
-    App.sendCommandToTerminal(COMMANDS.orgDisplay, ELEMENT_IDENTIFIER);
+    this.executeCommand(COMMANDS.orgDisplay);
   }
 
   //  ▂▃▄▅▆▇█▓▒░ Public Methods ░▒▓█▇▆▅▄▃▂
@@ -103,6 +105,7 @@ export default class MetadataExplorer extends CliElement {
   @api
   handleExecuteResult(result: ExecuteResult) {
     const command = result.command;
+    this.spinnerMessages.delete(command);
     if (command.startsWith(COMMAND_PREFIX.sfOrgDisplay)) {
       this.handleOrgDisplay(result);
       return;
@@ -136,16 +139,16 @@ export default class MetadataExplorer extends CliElement {
     const sObjectApiName = event.detail.name;
     if (
       this.selectedMetadataType?.xmlName !== CUSTOM_OBJECT ||
-      !this.getSObjectApiNames().includes(sObjectApiName)
+      !this.getSObjectApiNames().includes(sObjectApiName) ||
+      !event.detail.isExpanded
     ) {
       return;
     }
-    this.showSpinner = true;
     this.currentSObjectApiName = sObjectApiName;
-    App.sendCommandToTerminal(
-      COMMANDS.queryFieldDefinitions([`'${sObjectApiName}'`]),
-      ELEMENT_IDENTIFIER
+    this.executeCommand(
+      COMMANDS.queryFieldDefinitions([`'${sObjectApiName}'`])
     );
+    this.refresh();
   }
 
   /**
@@ -159,20 +162,14 @@ export default class MetadataExplorer extends CliElement {
     this.selectedMetadataType = this.metadataTypes?.result.metadataObjects.find(
       (metadataType) => metadataType.xmlName === selectedMetadataType
     );
-    this.showSpinner = true;
-    App.sendCommandToTerminal(
-      COMMANDS.listMetadataOfType(this.selectedMetadataType!.xmlName),
-      ELEMENT_IDENTIFIER
+
+    this.executeCommand(
+      COMMANDS.listMetadataOfType(this.selectedMetadataType!.xmlName)
     );
     if (this.selectedMetadataType!.childXmlNames) {
-      for (const childMetadataType of this.selectedMetadataType!.childXmlNames.filter(
-        // TODO (#2): Investigate why list view retrieval doesn't always work.
-        (childType) => childType !== "ListView"
-      )) {
-        App.sendCommandToTerminal(
-          COMMANDS.listMetadataOfType(childMetadataType),
-          ELEMENT_IDENTIFIER
-        );
+      for (const childMetadataType of this.selectedMetadataType!
+        .childXmlNames) {
+        this.executeCommand(COMMANDS.listMetadataOfType(childMetadataType));
       }
     }
     if (
@@ -208,11 +205,8 @@ export default class MetadataExplorer extends CliElement {
    * Initiates the retrieval of selected metadata items.
    */
   handleRetrieveClick() {
-    const retrieveCommand = COMMANDS.retrieveMetadata(
-      this.selectedMetadataRows!
-    );
-    this.showSpinner = true;
-    App.sendCommandToTerminal(retrieveCommand, ELEMENT_IDENTIFIER);
+    this.executeCommand(COMMANDS.retrieveMetadata(this.selectedMetadataRows!));
+    this.refresh();
   }
 
   /**
@@ -269,6 +263,11 @@ export default class MetadataExplorer extends CliElement {
 
   //  ▂▃▄▅▆▇█▓▒░ Private Methods ░▒▓█▇▆▅▄▃▂
 
+  private executeCommand(command: string) {
+    this.spinnerMessages.add(command);
+    App.sendCommandToTerminal(command, ELEMENT_IDENTIFIER);
+  }
+
   /**
    * Resets the metadata items and related properties.
    * Clears selections, results, and collapses the tree grid.
@@ -298,9 +297,12 @@ export default class MetadataExplorer extends CliElement {
   private handleOrgDisplay(result: ExecuteResult) {
     if (result.stdout) {
       this.orgConnectionInfo = JSON.parse(result.stdout);
-      App.sendCommandToTerminal(COMMANDS.listMetadataTypes, ELEMENT_IDENTIFIER);
+      this.executeCommand(COMMANDS.listMetadataTypes);
     } else if (result.stderr) {
-      this.error = result.stderr;
+      this.handleError(
+        result.stderr,
+        "Something went wrong when fetching org details"
+      );
     }
   }
 
@@ -313,9 +315,11 @@ export default class MetadataExplorer extends CliElement {
     if (result.stdout) {
       this.metadataTypes = JSON.parse(result.stdout);
     } else if (result.stderr) {
-      this.error = result.stderr;
+      this.handleError(
+        result.stderr,
+        "Something went wrong when fetching metadata types"
+      );
     }
-    this.showSpinner = false;
   }
 
   /**
@@ -324,8 +328,8 @@ export default class MetadataExplorer extends CliElement {
    * @param result The execution result.
    */
   private handleMetadataOfType(result: ExecuteResult) {
+    const selectedMetadataType = this.extractMetadataType(result.command);
     if (result.stdout) {
-      const selectedMetadataType = this.extractMetadataType(result.command);
       if (!selectedMetadataType) {
         return;
       }
@@ -336,9 +340,11 @@ export default class MetadataExplorer extends CliElement {
         metadataOfSelectedType
       );
     } else if (result.stderr) {
-      this.error = result.stderr;
+      this.handleError(
+        result.stderr,
+        `Something went wrong when fetching ${selectedMetadataType}`
+      );
     }
-    this.showSpinner = false;
   }
 
   /**
@@ -377,7 +383,30 @@ export default class MetadataExplorer extends CliElement {
    * @param result The execution result.
    */
   private handleMetadataRetrieve(result: ExecuteResult) {
-    this.showSpinner = false;
+    const errorHeader = `Something went wrong when retrieving metadata`;
+    if (result.stderr) {
+      this.handleError(result.stderr, errorHeader);
+    }
+    if (result.stdout) {
+      const response: RetrieveMetadataResponse = JSON.parse(result.stdout);
+      const errorMessage = this.extractErrorMessages(response);
+      if (errorMessage.length > 0) {
+        this.handleError(errorMessage.join("\n"), errorHeader);
+      }
+    }
+    this.refresh();
+  }
+
+  /**
+   * Extracts error messages from a RetrieveMetadataResponse.
+   * Filters for files with a 'Failed' state and returns their error messages.
+   * @param result The RetrieveMetadataResponse object.
+   * @returns An array of error messages, or an empty array if none are found.
+   */
+  private extractErrorMessages(result: RetrieveMetadataResponse): string[] {
+    return result.result.files
+      .filter((file) => file.state === "Failed")
+      .map((file) => file.error?.toString() ?? "");
   }
 
   /**
@@ -386,11 +415,6 @@ export default class MetadataExplorer extends CliElement {
    * @param result The execution result.
    */
   private handleFieldQuery(result: ExecuteResult) {
-    this.showSpinner = false;
-    if (result.stderr) {
-      this.error = result.stderr;
-      return;
-    }
     if (result.stdout) {
       const queryResult = JSON.parse(result.stdout);
       this.standardFieldsBySObjectApiName.set(
@@ -398,6 +422,13 @@ export default class MetadataExplorer extends CliElement {
         queryResult
       );
       this.currentSObjectApiName = undefined;
+      this.refresh();
+    } else if (result.stderr) {
+      this.handleError(
+        result.stderr,
+        `Something went wrong when querying FieldDefinition for ${this.currentSObjectApiName}`
+      );
+      return;
     }
   }
 
@@ -520,8 +551,7 @@ export default class MetadataExplorer extends CliElement {
     return {
       id: `${metadataItem.fullName}.${childType}`,
       metadataType: childType,
-      statusIcon: ICONS.loading,
-      _children: []
+      statusIcon: ICONS.loading
     };
   }
 
@@ -610,6 +640,25 @@ export default class MetadataExplorer extends CliElement {
       }));
   }
 
+  /**
+   * Displays an error toast message.
+   * @param error The error message to display.
+   * @param label The label for the toast.
+   */
+  private async handleError(error: string, label: string) {
+    Toast.show({ label: label, message: error, variant: "error" }, this);
+  }
+
+  /**
+   * Forces a rerender of the component.
+   * This is useful for updating the UI after asynchronous operations
+   * that change the underlying data, such as fetching standard fields.
+   * It toggles the `refreshView` tracked property, triggering a rerender.
+   */
+  private refresh() {
+    this.refreshView = !this.refreshView;
+  }
+
   //  ▂▃▄▅▆▇█▓▒░ Getters ░▒▓█▇▆▅▄▃▂
 
   /**
@@ -670,5 +719,15 @@ export default class MetadataExplorer extends CliElement {
    */
   get selectedMetadataTypeValue(): string | undefined {
     return this.selectedMetadataType?.xmlName;
+  }
+
+  /**
+   * Formats the spinner display text by joining spinner messages with newlines.
+   * Returns undefined if there are no spinner messages.
+   */
+  get spinnerDisplayText(): string[] | undefined {
+    return this.spinnerMessages.size > 0
+      ? Array.from(this.spinnerMessages)
+      : undefined;
   }
 }

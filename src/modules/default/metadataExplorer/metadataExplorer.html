@@ -89,19 +89,27 @@
         </div>
       </template>
     </lightning-card>
+    <template lwc:if={spinnerDisplayText}>
+      <div class="slds-backdrop slds-backdrop_open">
+        <div class="slds-spinner_container">
+          <div
+            class="slds-spinner_brand slds-spinner slds-spinner_large slds-is-relative"
+          >
+            <span class="slds-assistive-text">Loading</span>
+            <div class="slds-spinner__dot-a"></div>
+            <div class="slds-spinner__dot-b"></div>
+          </div>
 
-    <template lwc:if={error}>
-      <div class="slds-p-around_medium">
-        <p>Error:</p>
-        <pre class="slds-box slds-text-font_monospace">{error}</pre>
+          <div class="slds-spinner-text slds-p-top_large">
+            <ul>
+              <template for:each={spinnerDisplayText} for:item="item">
+                <li key={item}>{item}</li>
+              </template>
+            </ul>
+          </div>
+        </div>
       </div>
     </template>
-
-    <template lwc:if={showSpinner}>
-      <lightning-spinner
-        alternative-text="Loading"
-        size="medium"
-      ></lightning-spinner>
-    </template>
   </div>
+  <div class="slds-hidden">{refreshView}</div>
 </template>

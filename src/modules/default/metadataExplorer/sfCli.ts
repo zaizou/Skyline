@@ -192,6 +192,8 @@ interface File {
   type: string;
   state: string;
   filePath: string;
+  error?: string;
+  problemType?: string;
 }
 
 /**
