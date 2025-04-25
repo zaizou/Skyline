@@ -1,6 +1,16 @@
+/**
+ * This is the VS Code extension's main entry point.
+ * It registers a command that creates a webview panel displaying the LWC application.
+ * The extension handles messages from the webview, executing commands and sending
+ * the results back to the webview.
+ */
 import { exec } from "child_process";
 import * as vscode from "vscode";
 
+/**
+ * Activates the extension. Registers the "lwc-dev.helloWorld" command.
+ * @param context The extension context.
+ */
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand("lwc-dev.helloWorld", () => {
@@ -28,6 +38,12 @@ export function activate(context: vscode.ExtensionContext) {
   );
 }
 
+/**
+ * Generates the HTML content for the webview.
+ * @param webview The webview instance.
+ * @param extensionUri The URI of the extension.
+ * @returns The HTML content string.
+ */
 function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri) {
   const distFolder = "dist";
   const scriptUri = getUri(webview, extensionUri, [distFolder, "index.js"]);
@@ -66,6 +82,13 @@ function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri) {
     </html>`;
 }
 
+/**
+ * Constructs a webview URI for a given file path.
+ * @param webview The webview instance.
+ * @param extensionUri The URI of the extension.
+ * @param pathList The path segments of the file.
+ * @returns The webview URI.
+ */
 function getUri(
   webview: vscode.Webview,
   extensionUri: vscode.Uri,
@@ -74,13 +97,12 @@ function getUri(
   return webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, ...pathList));
 }
 
-interface ExecuteResult {
-  command: string;
-  stdout?: string;
-  stderr?: string;
-  elementId?: string;
-}
-
+/**
+ * Executes a command and sends the result back to the webview.
+ * @param panel The webview panel.
+ * @param command The command to execute.
+ * @param elementId The ID of the element that initiated the command.
+ */
 function execute(
   panel: vscode.WebviewPanel,
   command: string,
@@ -98,4 +120,14 @@ function execute(
     }
     panel.webview.postMessage(result);
   });
+}
+
+/**
+ * Interface representing the result of a command execution.
+ */
+interface ExecuteResult {
+  command: string;
+  stdout?: string;
+  stderr?: string;
+  elementId?: string;
 }

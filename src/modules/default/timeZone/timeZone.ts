@@ -1,3 +1,8 @@
+/**
+ * This component provides a dropdown menu for selecting a time zone.
+ * It emits a 'timezonechange' event when the selected time zone changes.
+ * The component includes a predefined list of time zones.
+ */
 import { LightningElement, api } from "lwc";
 
 const ZONES = [
@@ -429,6 +434,11 @@ const ZONES = [
 export default class TimeZone extends LightningElement {
   @api value?: string;
 
+  /**
+   * Handles changes to the time zone selection.
+   * Dispatches a 'timezonechange' event with the new selected value.
+   * @param event The change event.
+   */
   handleChange(event: CustomEvent) {
     this.dispatchEvent(
       new CustomEvent("timezonechange", {
@@ -437,6 +447,10 @@ export default class TimeZone extends LightningElement {
     );
   }
 
+  /**
+   * Provides the options for the time zone dropdown.
+   * @returns An array of objects, each representing a time zone option.
+   */
   get options(): { label: string; value: string }[] {
     const result = [];
     for (const zone of ZONES) {

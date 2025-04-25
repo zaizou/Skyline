@@ -1,3 +1,11 @@
+/**
+ * This component provides a user interface for exploring and retrieving Salesforce metadata.
+ * It uses the Salesforce CLI to interact with the org and displays the metadata
+ * in a hierarchical tree grid. Users can select specific metadata items or types
+ * and retrieve them to their local project.  Filtering and sorting capabilities
+ * are also provided.  It leverages the lightning-tree-grid component for display and
+ * integrates with a terminal component for executing CLI commands.
+ */
 import { ExecuteResult } from "../app/app";
 import { track, api } from "lwc";
 import {
@@ -77,12 +85,21 @@ export default class MetadataExplorer extends CliElement {
   @track currentSObjectApiName?: string;
   @track processedMetadataTypes: string[] = [];
 
+  /**
+   * Called when the component is connected to the DOM.
+   * Retrieves the org connection information.
+   */
   connectedCallback(): void {
     App.sendCommandToTerminal(COMMANDS.orgDisplay, ELEMENT_IDENTIFIER);
   }
 
   //  ▂▃▄▅▆▇█▓▒░ Public Methods ░▒▓█▇▆▅▄▃▂
 
+  /**
+   * Handles execute results from the terminal.
+   * Dispatches the result to the appropriate handler based on the command prefix.
+   * @param result The execution result from the terminal.
+   */
   @api
   handleExecuteResult(result: ExecuteResult) {
     const command = result.command;
@@ -110,6 +127,11 @@ export default class MetadataExplorer extends CliElement {
 
   //  ▂▃▄▅▆▇█▓▒░ Event Handlers ░▒▓█▇▆▅▄▃▂
 
+  /**
+   * Handles toggling the expansion of a custom object in the tree grid.
+   * Queries and displays the standard fields for the selected custom object.
+   * @param event The custom event containing the name of the custom object.
+   */
   handleToggle(event: CustomEvent) {
     const sObjectApiName = event.detail.name;
     if (
@@ -126,6 +148,11 @@ export default class MetadataExplorer extends CliElement {
     );
   }
 
+  /**
+   * Handles the selection of a metadata type from the dropdown.
+   * Retrieves the metadata items for the selected type.
+   * @param event The change event containing the selected metadata type value.
+   */
   handleMetadataTypeSelection(event: CustomEvent) {
     this.resetMetadataItems();
     const selectedMetadataType = (event.target as HTMLInputElement).value;
@@ -157,15 +184,29 @@ export default class MetadataExplorer extends CliElement {
     }
   }
 
+  /**
+   * Handles the click event on the dropdown button.
+   * Toggles the visibility of the dropdown options.
+   * @param event The click event.
+   */
   handleDropdownClick(event: CustomEvent) {
     this.renderDropdownOptions = !this.renderDropdownOptions;
   }
 
+  /**
+   * Handles row selection in the lightning-tree-grid component.
+   * Updates the selectedRows property.
+   * @param event The row selection event.
+   */
   handleRowSelection(event: CustomEvent) {
     const selectedRows = event.detail.selectedRows;
     this.selectedRows = selectedRows;
   }
 
+  /**
+   * Handles the click event on the retrieve button.
+   * Initiates the retrieval of selected metadata items.
+   */
   handleRetrieveClick() {
     const retrieveCommand = COMMANDS.retrieveMetadata(
       this.selectedMetadataRows!
@@ -174,26 +215,49 @@ export default class MetadataExplorer extends CliElement {
     App.sendCommandToTerminal(retrieveCommand, ELEMENT_IDENTIFIER);
   }
 
+  /**
+   * Handles changes to the component name search term.
+   * @param event The change event.
+   */
   handleComponentNameChange(event: CustomEvent) {
     this.searchTermComponentName = event.detail.value;
   }
 
+  /**
+   * Handles changes to the user name search term.
+   * @param event The change event.
+   */
   handleUserNameChange(event: CustomEvent) {
     this.searchTermUserName = event.detail.value;
   }
 
+  /**
+   * Handles changes to the "from" date search term.
+   * @param event The change event.
+   */
   handleFromChange(event: CustomEvent) {
     this.searchTermFrom = event.detail.value;
   }
 
+  /**
+   * Handles changes to the "to" date search term.
+   * @param event The change event.
+   */
   handleToChange(event: CustomEvent) {
     this.searchTermTo = event.detail.value;
   }
 
+  /**
+   * Handles changes to the selected time zone.
+   * @param event The change event.
+   */
   handleTimeZoneChange(event: CustomEvent) {
     this.selectedTimeZone = event.detail;
   }
 
+  /**
+   * Handles clicks on the filter button. Toggles the filter state and resets filter values.
+   */
   handleFilterButtonClick() {
     this.filterState = !this.filterState;
     this.searchTermComponentName = undefined;
@@ -205,6 +269,10 @@ export default class MetadataExplorer extends CliElement {
 
   //  ▂▃▄▅▆▇█▓▒░ Private Methods ░▒▓█▇▆▅▄▃▂
 
+  /**
+   * Resets the metadata items and related properties.
+   * Clears selections, results, and collapses the tree grid.
+   */
   private resetMetadataItems() {
     this.renderDropdownOptions = false;
     this.selectedRows = undefined;
@@ -216,8 +284,17 @@ export default class MetadataExplorer extends CliElement {
       FieldDefinitionResponse
     >();
     this.currentSObjectApiName = undefined;
+    const treeGrid = this.template!.querySelector("lightning-tree-grid");
+    if (treeGrid) {
+      (treeGrid as any).collapseAll();
+    }
   }
 
+  /**
+   * Handles the result of the `sf org display` command.
+   * Stores the org connection information and retrieves metadata types.
+   * @param result The execution result.
+   */
   private handleOrgDisplay(result: ExecuteResult) {
     if (result.stdout) {
       this.orgConnectionInfo = JSON.parse(result.stdout);
@@ -227,6 +304,11 @@ export default class MetadataExplorer extends CliElement {
     }
   }
 
+  /**
+   * Handles the result of the `sf org list metadata-types` command.
+   * Stores the retrieved metadata types.
+   * @param result The execution result.
+   */
   private handleMetadataTypes(result: ExecuteResult) {
     if (result.stdout) {
       this.metadataTypes = JSON.parse(result.stdout);
@@ -236,6 +318,11 @@ export default class MetadataExplorer extends CliElement {
     this.showSpinner = false;
   }
 
+  /**
+   * Handles the result of the `sf org list metadata` command.
+   * Stores the retrieved metadata items by type.
+   * @param result The execution result.
+   */
   private handleMetadataOfType(result: ExecuteResult) {
     if (result.stdout) {
       const selectedMetadataType = this.extractMetadataType(result.command);
@@ -254,6 +341,10 @@ export default class MetadataExplorer extends CliElement {
     this.showSpinner = false;
   }
 
+  /**
+   * Returns a list of SObject API names.
+   * @returns An array of SObject API names.
+   */
   private getSObjectApiNames(): string[] {
     return (
       this.metadataItemsByType
@@ -262,6 +353,11 @@ export default class MetadataExplorer extends CliElement {
     );
   }
 
+  /**
+   * Extracts the metadata type from the command string.
+   * @param command The command string.
+   * @returns The extracted metadata type or undefined if not found.
+   */
   private extractMetadataType(command: string): string | undefined {
     const metadataPrefixRegex = new RegExp(
       COMMAND_PREFIX.sfOrgListMetadata + "\\s+(\\w+)"
@@ -275,10 +371,20 @@ export default class MetadataExplorer extends CliElement {
     return undefined;
   }
 
+  /**
+   * Handles the result of the `sf project retrieve start` command.
+   * Hides the spinner.
+   * @param result The execution result.
+   */
   private handleMetadataRetrieve(result: ExecuteResult) {
     this.showSpinner = false;
   }
 
+  /**
+   * Handles the result of the `sf data query` command for field definitions.
+   * Stores the retrieved field definitions by SObject API name.
+   * @param result The execution result.
+   */
   private handleFieldQuery(result: ExecuteResult) {
     this.showSpinner = false;
     if (result.stderr) {
@@ -295,12 +401,23 @@ export default class MetadataExplorer extends CliElement {
     }
   }
 
+  /**
+   * Applies filters to the table rows.
+   * Currently applies last modified date and component name filters.
+   * @param rows The table rows to filter.
+   * @returns The filtered table rows.
+   */
   private applyTableRowFilters(rows: TableRow[]): TableRow[] {
     rows = this.applyLastModifiedDateRowFilter(rows);
     rows = this.applyComponentNameTableRowFilter(rows);
     return rows;
   }
 
+  /**
+   * Filters table rows based on the last modified date range.
+   * @param rows The table rows to filter.
+   * @returns The filtered table rows.
+   */
   private applyLastModifiedDateRowFilter(rows: TableRow[]): TableRow[] {
     if (!this.searchTermFrom && !this.searchTermTo) {
       return rows;
@@ -322,6 +439,11 @@ export default class MetadataExplorer extends CliElement {
     });
   }
 
+  /**
+   * Filters table rows based on the component name search term.
+   * @param rows The table rows to filter.
+   * @returns The filtered table rows.
+   */
   private applyComponentNameTableRowFilter(rows: TableRow[]): TableRow[] {
     if (!this.searchTermComponentName) {
       return rows;
@@ -331,6 +453,12 @@ export default class MetadataExplorer extends CliElement {
     );
   }
 
+  /**
+   * Performs a fuzzy match between a string and a pattern.
+   * @param str The string to search within.
+   * @param pattern The pattern to search for.
+   * @returns True if a fuzzy match is found, false otherwise.
+   */
   private fuzzyMatch(str: string, pattern: string): boolean {
     pattern = pattern.toLowerCase();
     str = str.toLowerCase();
@@ -346,6 +474,11 @@ export default class MetadataExplorer extends CliElement {
     return false;
   }
 
+  /**
+   * Creates child metadata table rows for the given metadata item.
+   * @param metadataItem The parent metadata item.
+   * @returns An array of child metadata table rows, or undefined if none exist.
+   */
   private getChildMetadataTableRows(
     metadataItem: TableRow
   ): TableRow[] | undefined {
@@ -374,6 +507,12 @@ export default class MetadataExplorer extends CliElement {
     return result.length > 0 ? result : undefined;
   }
 
+  /**
+   * Creates a child row representing a specific child metadata type.
+   * @param metadataItem The parent metadata item.
+   * @param childType The XML name of the child metadata type.
+   * @returns A TableRow representing the child type, initially in a loading state.
+   */
   private createChildTypeRow(
     metadataItem: TableRow,
     childType: string
@@ -386,6 +525,12 @@ export default class MetadataExplorer extends CliElement {
     };
   }
 
+  /**
+   * Retrieves child metadata item rows for a given parent metadata item and child type.
+   * @param metadataItem The parent metadata item.
+   * @param childType The XML name of the child metadata type.
+   * @returns An array of TableRows representing the child metadata items, or undefined if none are found.
+   */
   private getChildMetadataItemRows(
     metadataItem: TableRow,
     childType: string
@@ -397,6 +542,11 @@ export default class MetadataExplorer extends CliElement {
     }
   }
 
+  /**
+   * Retrieves standard field rows for a given SObject.
+   * @param metadataItem The parent metadata item representing the SObject.
+   * @returns An array of TableRows representing the standard fields, or undefined if none are found.
+   */
   private getStandardFieldRows(metadataItem: TableRow): TableRow[] | undefined {
     const standardFields = this.standardFieldsBySObjectApiName.get(
       metadataItem.fullName!
@@ -418,6 +568,12 @@ export default class MetadataExplorer extends CliElement {
       .sort((a, b) => a.label!.localeCompare(b.label!));
   }
 
+  /**
+   * Retrieves child metadata rows for types other than standard fields.
+   * @param metadataItem The parent metadata item.
+   * @param childType The XML name of the child metadata type.
+   * @returns An array of TableRows representing the child metadata items, or undefined if none are found.
+   */
   private getOtherChildMetadataRows(
     metadataItem: TableRow,
     childType: string
@@ -436,6 +592,11 @@ export default class MetadataExplorer extends CliElement {
       .sort((a, b) => a.fullName!.localeCompare(b.fullName!));
   }
 
+  /**
+   * Creates child rows for the tree grid. Applies filters and sorts the rows.
+   * @param metadataItems The metadata items to create rows for.
+   * @returns An array of TableRows representing the child metadata items.
+   */
   private createChildRows(
     metadataItems: ListMetadataOfTypeResponse
   ): TableRow[] {
@@ -451,6 +612,11 @@ export default class MetadataExplorer extends CliElement {
 
   //  ▂▃▄▅▆▇█▓▒░ Getters ░▒▓█▇▆▅▄▃▂
 
+  /**
+   * Getter for the main table rows.  Constructs the hierarchical
+   * data structure for the lightning-tree-grid component.
+   * @returns An array of TableRows representing the root level of the metadata tree.
+   */
   get rows(): TableRow[] | undefined {
     if (!this.selectedMetadataType) {
       return undefined;
@@ -467,12 +633,20 @@ export default class MetadataExplorer extends CliElement {
     ];
   }
 
+  /**
+   * Getter for the currently selected metadata rows, formatted for retrieval.
+   * @returns An array of strings representing the selected metadata items, or undefined if none are selected.
+   */
   get selectedMetadataRows(): string[] | undefined {
     return this.selectedRows
       ?.filter((metadataRow) => metadataRow.fullName)
       ?.map((metadataRow) => `${metadataRow.type}:${metadataRow.fullName}`);
   }
 
+  /**
+   * Getter to determine whether to render the retrieve button.
+   * @returns True if rows are selected, false otherwise.
+   */
   get renderRetrieve() {
     if (!this.selectedRows) {
       return false;
@@ -480,12 +654,20 @@ export default class MetadataExplorer extends CliElement {
     return this.selectedRows.length > 0;
   }
 
+  /**
+   * Getter for the available metadata type options for the dropdown.
+   * @returns An array of objects representing the metadata types, or undefined if none are available.
+   */
   get metadataTypeOptions(): { label: string; value: string }[] | undefined {
     return this.metadataTypes?.result.metadataObjects
       .map((mType) => ({ label: mType.xmlName, value: mType.xmlName }))
       .sort((a, b) => a.label.localeCompare(b.label));
   }
 
+  /**
+   * Getter for the currently selected metadata type value.
+   * @returns The value of the currently selected metadata type, or undefined if none is selected.
+   */
   get selectedMetadataTypeValue(): string | undefined {
     return this.selectedMetadataType?.xmlName;
   }
