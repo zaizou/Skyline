@@ -14,7 +14,6 @@ import CLIElement from "../cliElement/cliElement";
  */
 export enum Pages {
   home = "Home",
-  terminal = "Terminal",
   metadataExplorer = "Metadata Explorer"
 }
 
@@ -95,14 +94,6 @@ export default class App extends LightningElement {
    */
   get showHome() {
     return this.currentPage === Pages.home;
-  }
-
-  /**
-   * Getter to determine if the Terminal page should be displayed.
-   * @returns True if the current page is Terminal, false otherwise.
-   */
-  get showTerminal() {
-    return this.currentPage === Pages.terminal;
   }
 
   /**
