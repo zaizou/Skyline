@@ -8,6 +8,7 @@
 
 import { LightningElement, api } from "lwc";
 import { ExecuteResult } from "../app/app";
+import App from "../app/app";
 
 export default class CliElement extends LightningElement {
   /**
@@ -19,5 +20,23 @@ export default class CliElement extends LightningElement {
   @api
   handleExecuteResult(result: ExecuteResult) {
     throw new Error("Method not implemented.");
+  }
+
+  /**
+   * Retrieves the unique identifier for this element.
+   * Child classes must implement this method to provide their specific identifier.
+   * @returns {string} The unique identifier for this element.
+   * @throws {Error} Throws an error if not implemented by a child component.
+   */
+  getElementIdentifier(): string {
+    throw new Error("Method not implemented.");
+  }
+
+  /**
+   * Sends a command to the terminal for execution.
+   * @param {string} command The command to execute.
+   */
+  sendCommandToTerminal(command: string) {
+    App.sendCommandToTerminal(command, this.getElementIdentifier());
   }
 }

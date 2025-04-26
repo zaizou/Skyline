@@ -1,0 +1,47 @@
+{
+  "version": "1.0.0",
+  "branches": {
+    "main": {
+      "label": "Production",
+      "instanceUrl": "https://login.salesforce.com",
+      "consumerKey": "YOUR_CONSUMER_KEY",
+      "username": "prod.user@example.com",
+      "secretNames": {
+        "keySecret": "PROD_KEY_SECRET",
+        "certificatePath": "PROD_CERT_PATH"
+      },
+      "testLevels": {
+        "presubmit": "RunLocalTests",
+        "deployment": "RunAllTestsInOrg"
+      }
+    },
+    "staging": {
+      "label": "UAT",
+      "instanceUrl": "https://test.salesforce.com",
+      "consumerKey": "YOUR_CONSUMER_KEY",
+      "username": "uat.user@example.com",
+      "secretNames": {
+        "keySecret": "UAT_KEY_SECRET",
+        "certificatePath": "UAT_CERT_PATH"
+      },
+      "testLevels": {
+        "presubmit": "RunSpecifiedTests",
+        "deployment": "RunLocalTests"
+      }
+    },
+    "develop": {
+      "label": "Development",
+      "instanceUrl": "https://test.salesforce.com",
+      "consumerKey": "YOUR_CONSUMER_KEY",
+      "username": "dev.user@example.com",
+      "secretNames": {
+        "keySecret": "DEV_KEY_SECRET",
+        "certificatePath": "DEV_CERT_PATH"
+      },
+      "testLevels": {
+        "presubmit": "RunSpecifiedTests",
+        "deployment": "NoTestRun"
+      }
+    }
+  }
+}

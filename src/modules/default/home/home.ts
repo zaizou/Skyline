@@ -57,14 +57,8 @@ export default class Home extends CLIElement {
    */
   connectedCallback(): void {
     this.showSpinner = true;
-    App.sendCommandToTerminal(
-      COMMANDS.verifyGitIsInstalled,
-      ELEMENT_IDENTIFIER
-    );
-    App.sendCommandToTerminal(
-      COMMANDS.verifySfCliIsInstalled,
-      ELEMENT_IDENTIFIER
-    );
+    this.sendCommandToTerminal(COMMANDS.verifyGitIsInstalled);
+    this.sendCommandToTerminal(COMMANDS.verifySfCliIsInstalled);
   }
 
   /**
@@ -96,16 +90,23 @@ export default class Home extends CLIElement {
   }
 
   /**
+   * Returns the unique identifier for this component.
+   * This identifier is used to distinguish between different components when handling
+   * command results from the terminal.
+   * @returns {string} The element identifier.
+   */
+  getElementIdentifier() {
+    return ELEMENT_IDENTIFIER;
+  }
+
+  /**
    * Handles the result of the Git installation check.
    * @param result The execution result.
    */
   handleGitInstalledResult(result: ExecuteResult) {
     if (result.stdout) {
       this.gitInstalled = true;
-      App.sendCommandToTerminal(
-        COMMANDS.verifyInCurrentGitDir,
-        ELEMENT_IDENTIFIER
-      );
+      this.sendCommandToTerminal(COMMANDS.verifyInCurrentGitDir);
     } else {
       this.hasError = true;
       this.errorMessage = ERROR_MESSAGES.gitNotInstalled;

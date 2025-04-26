@@ -59,6 +59,9 @@ function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri) {
     "icons"
   ]);
 
+  // Add extensionPath to window object
+  const extensionPath = extensionUri.fsPath;
+
   return /*html */ `<!DOCTYPE html>
     <html lang="en">
       <head>
@@ -74,6 +77,9 @@ function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri) {
             rel="icons"
             href=${iconUri}
         />
+        <script>
+          window.extensionPath = "${extensionPath.replace(/\\/g, "\\\\")}";
+        </script>
       </head>
       <body>
         <script src="${scriptUri}">
@@ -115,6 +121,7 @@ function execute(
   exec(command, (error, stdout, stderr) => {
     if (error) {
       result.stderr = stderr;
+      result.errorCode = error.code;
     } else {
       result.stdout = stdout;
     }
@@ -130,4 +137,5 @@ interface ExecuteResult {
   stdout?: string;
   stderr?: string;
   elementId?: string;
+  errorCode?: number;
 }

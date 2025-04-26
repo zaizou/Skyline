@@ -85,6 +85,11 @@ const indexConfig = {
           from: "node_modules/@salesforce-ux/design-system/assets",
           to: "assets",
           noErrorOnMissing: true
+        },
+        {
+          from: "src/templates",
+          to: "templates",
+          force: true
         }
       ]
     })

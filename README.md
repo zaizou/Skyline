@@ -1,67 +1,146 @@
-# LWC VSCode Extension
+# LWC Development Extension for VS Code
 
-This project demonstrates a Visual Studio Code extension built using Lightning Web Components (LWC). It showcases several key capabilities of LWC within the VS Code extension environment, including real-time component rendering, interactive user input handling, asynchronous operation execution (using the Salesforce CLI), and dynamic output display.
+A Visual Studio Code extension that enhances the Lightning Web Component (LWC) development experience by providing a graphical interface for Salesforce metadata management and project configuration.
 
 ## Features
 
-- **Modular Design:** The application is built using LWC modules for better organization and reusability.
-- **Salesforce CLI Integration:** The extension interacts with the Salesforce CLI to execute commands and retrieve data. This allows for integration with Salesforce orgs. Requires the Salesforce CLI to be installed.
-- **Real-time Updates:** Changes in the UI are reflected immediately, providing a responsive user experience.
-- **Asynchronous Operations:** The extension handles asynchronous operations gracefully, providing feedback to the user while commands are executed.
-- **Error Handling:** Basic error handling is implemented to display informative messages to the user in case of failures.
-- **Interactive Components:** The Metadata Explorer allows users to filter and retrieve metadata from their Salesforce org.
-- **Home Page System Check:** A home page verifies the installation of necessary tools (Git and SF CLI).
+### 🏠 Home Dashboard
 
-## Components
+- System prerequisite verification
+- Installation status checks for:
+  - Git
+  - Salesforce CLI
+  - Git repository setup
+- Visual progress indicators for setup status
 
-The extension comprises the following key LWC components:
+### 🔍 Metadata Explorer
 
-- **App:** The main application component, routing between different pages.
-- **Home:** A welcome page verifying system prerequisites.
-- **Terminal:** A component for executing arbitrary commands and displaying the output.
-- **Metadata Explorer:** A sophisticated component to interact with Salesforce metadata. This allows for listing metadata types, filtering metadata based on name, user, and date, and retrieving selected metadata.
-- **Header:** Navigation bar across the application.
-- **CliElement:** Base component for components requiring CLI interaction.
+- Browse and search Salesforce metadata types
+- Filter metadata by:
+  - Component name
+  - Last modified date
+  - User
+- Hierarchical view of metadata relationships
+- Direct metadata retrieval to local project
+- Time zone support for date filtering
 
-## Getting Started
+### ⚙️ Repository Configuration
 
-1. **Prerequisites:**
+- Manage project configuration settings
+- View and edit configuration files
+- Validate repository setup
 
-   - Node.js and npm (or yarn)
-   - Visual Studio Code
-   - Salesforce CLI (for Metadata Explorer functionality)
-   - Git (for Home page system check)
+## Prerequisites
 
-2. **Clone the repository:**
+Before using this extension, ensure you have:
 
-   ```bash
-   git clone <repository_url>
-   ```
+- Visual Studio Code 1.95.0 or later
+- Git installed locally
+- Salesforce CLI (sf) installed
+- A Git repository initialized in your project
+- Node.js and npm
 
-3. **Navigate to the project directory:**
+## Installation
 
-   ```bash
-   cd <project_directory>
-   ```
+1. Download the VSIX file from the releases page
+2. Open VS Code
+3. Go to Extensions view (`Ctrl+Shift+X` or `Cmd+Shift+X`)
+4. Click the "..." menu at the top of the Extensions view
+5. Select "Install from VSIX..."
+6. Choose the downloaded VSIX file
 
-4. **Install dependencies:**
+## Usage
 
-   ```bash
-   npm install
-   ```
+1. Open the command palette (`Ctrl+Shift+P` or `Cmd+Shift+P`)
+2. Type "LWC Extension" and select it
+3. The extension interface will open in a new panel
 
-5. **Build the extension:** (This step might need adjustments depending on the exact build process used in your project; look for a build script in your package.json)
+### Metadata Explorer
 
-   ```bash
-   npm run build
-   ```
+1. Select a metadata type from the dropdown
+2. Use filters to narrow down results:
+   - Enter component names
+   - Select date ranges
+   - Filter by last modified user
+3. Click the checkboxes to select metadata
+4. Click "Retrieve" to download selected metadata to your project
 
-6. **Run the extension:**
+### System Checks
 
-   Open VS Code and press `F5`. This will launch a new VS Code window with the extension loaded. You can then interact with the extension through the command palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) by searching for "LWC Development".
+The home page automatically verifies:
 
-7. **Running Tests:** Navigate to the `test` directory and execute `npm run test`.
+- Git installation
+- Current directory Git repository status
+- Salesforce CLI installation
 
-## Extension Development Path and Tests Path
+## Development
 
-The `runTest.ts` file contains the paths to the extension and test files. Update these if necessary.
+### Setup
+
+```bash
+# Install dependencies
+npm install
+
+# Compile the extension
+npm run compile
+
+# Watch for changes during development
+npm run watch
+```
+
+### Testing
+
+```bash
+# Run all tests
+npm test
+
+# Run specific test suite
+npm test -- --grep "test-name"
+```
+
+### Building
+
+```bash
+# Create production build
+npm run package
+```
+
+### Project Structure
+
+```
+src/
+├── extension.ts          # VS Code extension entry point
+├── index.ts             # LWC application entry point
+├── modules/             # LWC components
+│   └── default/
+│       ├── app/         # Main application component
+│       ├── home/        # Home page component
+│       ├── metadataExplorer/  # Metadata browser
+│       └── repoConfig/  # Repository configuration
+├── test/                # Test files
+└── types/               # TypeScript type definitions
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## Dependencies
+
+- [@salesforce-ux/design-system](https://www.npmjs.com/package/@salesforce-ux/design-system) - ^2.25.3
+- [lightning-base-components](https://www.npmjs.com/package/lightning-base-components) - ^1.22.1-alpha
+- Various development dependencies for TypeScript, Webpack, and testing
+
+## Acknowledgments
+
+- Salesforce Lightning Design System team
+- Lightning Web Components framework team
+- VS Code extension development community
+
+## Support
+
+For support, please open an issue in the GitHub repository or contact the maintainers.

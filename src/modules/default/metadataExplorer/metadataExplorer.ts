@@ -128,6 +128,16 @@ export default class MetadataExplorer extends CliElement {
     }
   }
 
+  /**
+   * Returns the unique identifier for this component.
+   * This identifier is used to distinguish between different components when handling
+   * command results from the terminal.
+   * @returns {string} The element identifier.
+   */
+  getElementIdentifier() {
+    return ELEMENT_IDENTIFIER;
+  }
+
   //  ▂▃▄▅▆▇█▓▒░ Event Handlers ░▒▓█▇▆▅▄▃▂
 
   /**
@@ -265,7 +275,7 @@ export default class MetadataExplorer extends CliElement {
 
   private executeCommand(command: string) {
     this.spinnerMessages.add(command);
-    App.sendCommandToTerminal(command, ELEMENT_IDENTIFIER);
+    this.sendCommandToTerminal(command);
   }
 
   /**

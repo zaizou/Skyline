@@ -7,6 +7,9 @@
     <template lwc:if={showHome}>
       <default-home data-handler="home"></default-home>
     </template>
+    <template lwc:if={showRepoConfig}>
+      <default-repo-config data-handler="repoConfig"></default-repo-config>
+    </template>
     <template lwc:if={showMetadataExplorer}>
       <default-metadata-explorer
         data-handler="metadataExplorer"

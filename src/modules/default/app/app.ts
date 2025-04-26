@@ -14,6 +14,7 @@ import CLIElement from "../cliElement/cliElement";
  */
 export enum Pages {
   home = "Home",
+  repoConfig = "Repository Configuration",
   metadataExplorer = "Metadata Explorer"
 }
 
@@ -25,6 +26,7 @@ export interface ExecuteResult {
   stdout?: string;
   stderr?: string;
   elementId?: string;
+  errorCode?: number;
 }
 
 /**
@@ -102,5 +104,13 @@ export default class App extends LightningElement {
    */
   get showMetadataExplorer() {
     return this.currentPage === Pages.metadataExplorer;
+  }
+
+  /**
+   * Getter to determine if the Repo Config page should be displayed.
+   * @returns True if the current page is Repo Config, false otherwise.
+   */
+  get showRepoConfig() {
+    return this.currentPage === Pages.repoConfig;
   }
 }
