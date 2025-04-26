@@ -1,38 +1,54 @@
-# LWC Development Extension for VS Code
+# Skyline
 
-A Visual Studio Code extension that enhances the Lightning Web Component (LWC) development experience by providing a graphical interface for Salesforce metadata management and project configuration.
+## Overview
+
+Skyline serves as a bridge between your local development environment and Salesforce orgs, enabling teams to:
+
+- Manage metadata across different environments seamlessly
+- Configure repository settings for different branches
+- Explore and retrieve Salesforce metadata through an intuitive interface
+- Validate system prerequisites and project setup
 
 ## Features
 
 ### 🏠 Home Dashboard
 
-- System prerequisite verification
-- Installation status checks for:
-  - Git
+- System health checks and setup validation
+- Automatic verification of essential tools:
+  - Git installation
   - Salesforce CLI
-  - Git repository setup
-- Visual progress indicators for setup status
+  - Repository configuration
+- Visual progress indicators for quick status overview
 
 ### 🔍 Metadata Explorer
 
-- Browse and search Salesforce metadata types
-- Filter metadata by:
-  - Component name
-  - Last modified date
-  - User
-- Hierarchical view of metadata relationships
-- Direct metadata retrieval to local project
-- Time zone support for date filtering
+- User-friendly interface for browsing Salesforce metadata
+- Advanced filtering capabilities:
+  - Component name search
+  - Last modified date ranges
+  - Modified by user
+- Hierarchical metadata visualization
+- One-click metadata retrieval
+- Timezone-aware date handling
 
 ### ⚙️ Repository Configuration
 
-- Manage project configuration settings
-- View and edit configuration files
-- Validate repository setup
+- Branch-specific environment configurations
+- Visual configuration editor
+- Environment validation
+- Deployment settings management
+- Test level configuration per environment
+
+## Who Is This For?
+
+- **Developers**: Streamline your workflow with quick access to metadata and repository settings
+- **Administrators**: Interact with metadata and configurations through a familiar interface
+- **Technical Leads**: Manage environment configurations and deployment settings
+- **Team Members**: Collaborate effectively with a unified tool for org management
 
 ## Prerequisites
 
-Before using this extension, ensure you have:
+Before using Skyline, ensure you have:
 
 - Visual Studio Code 1.95.0 or later
 - Git installed locally
@@ -52,26 +68,27 @@ Before using this extension, ensure you have:
 ## Usage
 
 1. Open the command palette (`Ctrl+Shift+P` or `Cmd+Shift+P`)
-2. Type "LWC Extension" and select it
-3. The extension interface will open in a new panel
+2. Type "Skyline" and select it to launch
+3. The Skyline interface will open in a new panel
 
 ### Metadata Explorer
 
 1. Select a metadata type from the dropdown
 2. Use filters to narrow down results:
-   - Enter component names
-   - Select date ranges
+   - Search by component name
+   - Filter by date range
    - Filter by last modified user
-3. Click the checkboxes to select metadata
-4. Click "Retrieve" to download selected metadata to your project
+3. Select metadata components
+4. Click "Retrieve" to download to your project
 
-### System Checks
+### Repository Configuration
 
-The home page automatically verifies:
-
-- Git installation
-- Current directory Git repository status
-- Salesforce CLI installation
+1. Select or create a branch configuration
+2. Configure environment-specific settings:
+   - Instance URLs
+   - Authentication details
+   - Test levels for deployments
+3. Save and manage configurations per branch
 
 ## Development
 
@@ -88,23 +105,6 @@ npm run compile
 npm run watch
 ```
 
-### Testing
-
-```bash
-# Run all tests
-npm test
-
-# Run specific test suite
-npm test -- --grep "test-name"
-```
-
-### Building
-
-```bash
-# Create production build
-npm run package
-```
-
 ### Project Structure
 
 ```
@@ -114,7 +114,7 @@ src/
 ├── modules/             # LWC components
 │   └── default/
 │       ├── app/         # Main application component
-│       ├── home/        # Home page component
+│       ├── home/        # Home dashboard
 │       ├── metadataExplorer/  # Metadata browser
 │       └── repoConfig/  # Repository configuration
 ├── test/                # Test files
@@ -134,12 +134,6 @@ src/
 - [@salesforce-ux/design-system](https://www.npmjs.com/package/@salesforce-ux/design-system) - ^2.25.3
 - [lightning-base-components](https://www.npmjs.com/package/lightning-base-components) - ^1.22.1-alpha
 - Various development dependencies for TypeScript, Webpack, and testing
-
-## Acknowledgments
-
-- Salesforce Lightning Design System team
-- Lightning Web Components framework team
-- VS Code extension development community
 
 ## Support
 

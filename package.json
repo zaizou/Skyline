@@ -14,8 +14,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "lwc-dev.helloWorld",
-        "title": "LWC Extension"
+        "command": "skyline.launch",
+        "title": "Skyline"
       }
     ]
   },

@@ -8,15 +8,15 @@ import { exec } from "child_process";
 import * as vscode from "vscode";
 
 /**
- * Activates the extension. Registers the "lwc-dev.helloWorld" command.
+ * Activates the extension. Registers the "skyline.launch" command.
  * @param context The extension context.
  */
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
-    vscode.commands.registerCommand("lwc-dev.helloWorld", () => {
+    vscode.commands.registerCommand("skyline.launch", () => {
       const panel = vscode.window.createWebviewPanel(
-        "lwc-dev", // Identifies the type of the webview. Used internally
-        "LWC Development", // Title of the panel displayed to the user
+        "skyline", // Identifies the type of the webview. Used internally
+        "Skyline", // Title of the panel displayed to the user
         vscode.ViewColumn.One, // Editor column to show the new webview panel in.
         {
           enableScripts: true,
