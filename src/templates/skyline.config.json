@@ -13,7 +13,8 @@
       "testLevels": {
         "presubmit": "RunLocalTests",
         "deployment": "RunAllTestsInOrg"
-      }
+      },
+      "pipelineOrder": 300
     },
     "staging": {
       "label": "UAT",
@@ -27,7 +28,8 @@
       "testLevels": {
         "presubmit": "RunSpecifiedTests",
         "deployment": "RunLocalTests"
-      }
+      },
+      "pipelineOrder": 200
     },
     "develop": {
       "label": "Development",
@@ -41,7 +43,8 @@
       "testLevels": {
         "presubmit": "RunSpecifiedTests",
         "deployment": "NoTestRun"
-      }
+      },
+      "pipelineOrder": 100
     }
   }
 }
