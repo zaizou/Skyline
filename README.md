@@ -31,7 +31,7 @@ Skyline serves as a bridge between your local development environment and Salesf
 - One-click metadata retrieval
 - Timezone-aware date handling
 
-### ⚙️ Repository Configuration
+### ⚙️ Pipeline Configuration
 
 - Branch-specific environment configurations
 - Visual configuration editor
@@ -81,7 +81,7 @@ Before using Skyline, ensure you have:
 3. Select metadata components
 4. Click "Retrieve" to download to your project
 
-### Repository Configuration
+### Pipeline Configuration
 
 1. Select or create a branch configuration
 2. Configure environment-specific settings:
@@ -116,7 +116,7 @@ src/
 │       ├── app/         # Main application component
 │       ├── home/        # Home dashboard
 │       ├── metadataExplorer/  # Metadata browser
-│       └── repoConfig/  # Repository configuration
+│       └── repoConfig/  # Pipeline configuration
 ├── test/                # Test files
 └── types/               # TypeScript type definitions
 ```

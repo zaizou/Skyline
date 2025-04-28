@@ -373,7 +373,9 @@ export default class RepoConfig extends CliElement {
         label: this.configurationFileContents!.branches[branchName].label,
         isFirst: index === 0,
         isLast:
-          index === this.configurationFileContents!.pipelineOrder.length - 1
+          index === this.configurationFileContents!.pipelineOrder.length - 1,
+        isSelected: branchName === this.selectedBranch,
+        buttonVariant: branchName === this.selectedBranch ? "brand" : "neutral"
       }));
   }
 
