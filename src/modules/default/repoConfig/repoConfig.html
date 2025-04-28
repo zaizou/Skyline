@@ -129,11 +129,6 @@
                     {currentEnvironmentConfig.username}
                   </dd>
 
-                  <dt class="slds-dl_horizontal__label">Pipeline Order:</dt>
-                  <dd class="slds-dl_horizontal__detail">
-                    {currentEnvironmentConfig.pipelineOrder}
-                  </dd>
-
                   <dt class="slds-dl_horizontal__label">
                     Presubmit Test Level:
                   </dt>
@@ -177,14 +172,6 @@
                     label="Consumer Key"
                     value={editedConfig.consumerKey}
                     data-field="consumerKey"
-                    onchange={handleInputChange}
-                  ></lightning-input>
-
-                  <lightning-input
-                    type="number"
-                    label="Pipeline Order"
-                    value={editedConfig.pipelineOrder}
-                    data-field="pipelineOrder"
                     onchange={handleInputChange}
                   ></lightning-input>
 

@@ -185,21 +185,21 @@ export default class RepoConfig extends CliElement {
     const branch = target.dataset.branch;
     if (!branch || !this.configurationFileContents) return;
 
-    const branches = this.orderedBranches;
-    const index = branches.findIndex((b) => b.name === branch);
-    if (index <= 0) return;
+    const currentIndex =
+      this.configurationFileContents.pipelineOrder.indexOf(branch);
+    if (currentIndex <= 0) return;
 
-    // Instead of swapping orders, let's set explicit new orders
-    const currentBranch = branches[index];
-    const prevBranch = branches[index - 1];
+    // Swap positions in the array
+    const newOrder = [...this.configurationFileContents.pipelineOrder];
+    [newOrder[currentIndex - 1], newOrder[currentIndex]] = [
+      newOrder[currentIndex],
+      newOrder[currentIndex - 1]
+    ];
 
-    // Calculate new orders that maintain the same relative spacing
-    const newOrder = prevBranch.pipelineOrder;
-    const prevNewOrder = currentBranch.pipelineOrder;
-
-    this.configurationFileContents.branches[branch].pipelineOrder = newOrder;
-    this.configurationFileContents.branches[prevBranch.name].pipelineOrder =
-      prevNewOrder;
+    this.configurationFileContents = {
+      ...this.configurationFileContents,
+      pipelineOrder: newOrder
+    };
 
     this.saveConfig();
   }
@@ -209,21 +209,22 @@ export default class RepoConfig extends CliElement {
     const branch = target.dataset.branch;
     if (!branch || !this.configurationFileContents) return;
 
-    const branches = this.orderedBranches;
-    const index = branches.findIndex((b) => b.name === branch);
-    if (index >= branches.length - 1) return;
+    const currentIndex =
+      this.configurationFileContents.pipelineOrder.indexOf(branch);
+    if (currentIndex >= this.configurationFileContents.pipelineOrder.length - 1)
+      return;
 
-    // Instead of swapping orders, let's set explicit new orders
-    const currentBranch = branches[index];
-    const nextBranch = branches[index + 1];
+    // Swap positions in the array
+    const newOrder = [...this.configurationFileContents.pipelineOrder];
+    [newOrder[currentIndex], newOrder[currentIndex + 1]] = [
+      newOrder[currentIndex + 1],
+      newOrder[currentIndex]
+    ];
 
-    // Calculate new orders that maintain the same relative spacing
-    const newOrder = nextBranch.pipelineOrder;
-    const nextNewOrder = currentBranch.pipelineOrder;
-
-    this.configurationFileContents.branches[branch].pipelineOrder = newOrder;
-    this.configurationFileContents.branches[nextBranch.name].pipelineOrder =
-      nextNewOrder;
+    this.configurationFileContents = {
+      ...this.configurationFileContents,
+      pipelineOrder: newOrder
+    };
 
     this.saveConfig();
   }
@@ -239,6 +240,9 @@ export default class RepoConfig extends CliElement {
 
     const updatedConfig = {
       ...this.configurationFileContents,
+      pipelineOrder: this.configurationFileContents.pipelineOrder.filter(
+        (b) => b !== this.selectedBranch
+      ),
       branches: { ...this.configurationFileContents.branches }
     };
     delete updatedConfig.branches[this.selectedBranch];
@@ -260,13 +264,6 @@ export default class RepoConfig extends CliElement {
       return;
     }
 
-    // Find the highest pipeline order and add 100 to it
-    const maxOrder = Math.max(
-      ...Object.values(this.configurationFileContents.branches).map(
-        (config) => config.pipelineOrder
-      )
-    );
-
     // Create new branch config from template
     const templateConfig = {
       label: branch,
@@ -280,12 +277,13 @@ export default class RepoConfig extends CliElement {
       testLevels: {
         presubmit: "RunLocalTests",
         deployment: "RunLocalTests"
-      },
-      pipelineOrder: maxOrder + 100
+      }
     };
 
+    // Add branch to the end of the pipeline
     const updatedConfig = {
       ...this.configurationFileContents,
+      pipelineOrder: [...this.configurationFileContents.pipelineOrder, branch],
       branches: {
         ...this.configurationFileContents.branches,
         [branch]: templateConfig
@@ -344,48 +342,39 @@ export default class RepoConfig extends CliElement {
   private saveConfig(config = this.configurationFileContents) {
     if (!config) return;
 
-    // Normalize pipeline orders to be multiples of 100
-    const branches = Object.entries(config.branches)
-      .sort((a, b) => a[1].pipelineOrder - b[1].pipelineOrder)
-      .map(([name, branch], index) => ({
-        name,
-        ...branch,
-        pipelineOrder: (index + 1) * 100
-      }));
+    // Ensure all branches are in the pipeline order
+    const allBranches = Object.keys(config.branches);
+    const missingBranches = allBranches.filter(
+      (b) => !config.pipelineOrder.includes(b)
+    );
 
-    const normalizedConfig = {
+    const updatedConfig = {
       ...config,
-      branches: branches.reduce((acc, branch) => {
-        const { name, ...branchConfig } = branch;
-        acc[name] = branchConfig;
-        return acc;
-      }, {} as typeof config.branches)
+      pipelineOrder: [...config.pipelineOrder, ...missingBranches]
     };
 
-    const configString = JSON.stringify(normalizedConfig, null, 2).replace(
+    const configString = JSON.stringify(updatedConfig, null, 2).replace(
       /'/g,
       "'\\''"
     );
     this.sendCommandToTerminal(this.commands.saveConfigFile(configString));
-    this.configurationFileContents = normalizedConfig;
+    this.configurationFileContents = updatedConfig;
   }
 
   get orderedBranches() {
     if (!this.configurationFileContents) return [];
 
-    const branches = Object.entries(this.configurationFileContents.branches)
-      .map(([name, config]) => ({
-        name,
-        label: config.label,
-        pipelineOrder: config.pipelineOrder
-      }))
-      .sort((a, b) => a.pipelineOrder - b.pipelineOrder);
-
-    return branches.map((branch, index) => ({
-      ...branch,
-      isFirst: index === 0,
-      isLast: index === branches.length - 1
-    }));
+    return this.configurationFileContents.pipelineOrder
+      .filter(
+        (branchName) => this.configurationFileContents!.branches[branchName]
+      )
+      .map((branchName, index) => ({
+        name: branchName,
+        label: this.configurationFileContents!.branches[branchName].label,
+        isFirst: index === 0,
+        isLast:
+          index === this.configurationFileContents!.pipelineOrder.length - 1
+      }));
   }
 
   get currentEnvironmentConfig() {

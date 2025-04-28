@@ -1,5 +1,6 @@
 {
   "version": "1.0.0",
+  "pipelineOrder": ["develop", "staging", "main"],
   "branches": {
     "main": {
       "label": "Production",
@@ -13,8 +14,7 @@
       "testLevels": {
         "presubmit": "RunLocalTests",
         "deployment": "RunAllTestsInOrg"
-      },
-      "pipelineOrder": 300
+      }
     },
     "staging": {
       "label": "UAT",
@@ -28,8 +28,7 @@
       "testLevels": {
         "presubmit": "RunSpecifiedTests",
         "deployment": "RunLocalTests"
-      },
-      "pipelineOrder": 200
+      }
     },
     "develop": {
       "label": "Development",
@@ -43,8 +42,7 @@
       "testLevels": {
         "presubmit": "RunSpecifiedTests",
         "deployment": "NoTestRun"
-      },
-      "pipelineOrder": 100
+      }
     }
   }
 }

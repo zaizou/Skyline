@@ -19,11 +19,11 @@ export interface SalesforceEnvironmentConfig {
       | "RunLocalTests"
       | "RunAllTestsInOrg";
   };
-  pipelineOrder: number; // Lower numbers come first in the pipeline
 }
 
 export interface SkylineConfig {
   version: string;
+  pipelineOrder: string[];
   branches: {
     [branchName: string]: SalesforceEnvironmentConfig;
   };
