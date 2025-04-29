@@ -23,6 +23,7 @@ export interface SalesforceEnvironmentConfig {
 
 export interface SkylineConfig {
   version: string;
+  pipelineOrder: string[];
   branches: {
     [branchName: string]: SalesforceEnvironmentConfig;
   };

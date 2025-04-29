@@ -1,5 +1,6 @@
 {
   "version": "1.0.0",
+  "pipelineOrder": ["develop", "staging", "main"],
   "branches": {
     "main": {
       "label": "Production",

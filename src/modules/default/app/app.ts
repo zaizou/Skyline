@@ -14,7 +14,7 @@ import CLIElement from "../cliElement/cliElement";
  */
 export enum Pages {
   home = "Home",
-  repoConfig = "Repository Configuration",
+  repoConfig = "Pipeline Configuration",
   metadataExplorer = "Metadata Explorer"
 }
 

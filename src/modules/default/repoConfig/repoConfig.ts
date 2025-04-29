@@ -145,8 +145,88 @@ export default class RepoConfig extends CliElement {
     }
   }
 
-  handleBranchChange(event: CustomEvent) {
-    this.selectedBranch = event.detail.value;
+  handleBranchSelect(event: CustomEvent) {
+    const target = event.target as HTMLElement;
+    const branch = target.dataset.branch;
+    this.selectedBranch = branch;
+  }
+
+  handleInputChange(event: CustomEvent) {
+    const target = event.target as HTMLInputElement;
+    if (!target?.dataset.field || !this.editedConfig) {
+      return;
+    }
+
+    const field = target.dataset.field;
+    const value =
+      target.type === "number" ? Number(target.value) : target.value;
+
+    if (field.includes(".")) {
+      const [parent, child] = field.split(".");
+      if (parent === "testLevels") {
+        this.editedConfig = {
+          ...this.editedConfig,
+          testLevels: {
+            ...this.editedConfig.testLevels,
+            [child]: value
+          }
+        };
+      }
+    } else {
+      this.editedConfig = {
+        ...this.editedConfig,
+        [field]: value
+      };
+    }
+  }
+
+  handleMoveUp(event: CustomEvent) {
+    const target = event.target as HTMLElement;
+    const branch = target.dataset.branch;
+    if (!branch || !this.configurationFileContents) return;
+
+    const currentIndex =
+      this.configurationFileContents.pipelineOrder.indexOf(branch);
+    if (currentIndex <= 0) return;
+
+    // Swap positions in the array
+    const newOrder = [...this.configurationFileContents.pipelineOrder];
+    [newOrder[currentIndex - 1], newOrder[currentIndex]] = [
+      newOrder[currentIndex],
+      newOrder[currentIndex - 1]
+    ];
+
+    this.configurationFileContents = {
+      ...this.configurationFileContents,
+      pipelineOrder: newOrder
+    };
+
+    this.saveConfig();
+  }
+
+  handleMoveDown(event: CustomEvent) {
+    const target = event.target as HTMLElement;
+    const branch = target.dataset.branch;
+    if (!branch || !this.configurationFileContents) return;
+
+    const currentIndex =
+      this.configurationFileContents.pipelineOrder.indexOf(branch);
+    if (currentIndex >= this.configurationFileContents.pipelineOrder.length - 1)
+      return;
+
+    // Swap positions in the array
+    const newOrder = [...this.configurationFileContents.pipelineOrder];
+    [newOrder[currentIndex], newOrder[currentIndex + 1]] = [
+      newOrder[currentIndex + 1],
+      newOrder[currentIndex]
+    ];
+
+    this.configurationFileContents = {
+      ...this.configurationFileContents,
+      pipelineOrder: newOrder
+    };
+
+    this.saveConfig();
   }
 
   handleNewBranchClick() {
@@ -160,6 +240,9 @@ export default class RepoConfig extends CliElement {
 
     const updatedConfig = {
       ...this.configurationFileContents,
+      pipelineOrder: this.configurationFileContents.pipelineOrder.filter(
+        (b) => b !== this.selectedBranch
+      ),
       branches: { ...this.configurationFileContents.branches }
     };
     delete updatedConfig.branches[this.selectedBranch];
@@ -197,8 +280,10 @@ export default class RepoConfig extends CliElement {
       }
     };
 
+    // Add branch to the end of the pipeline
     const updatedConfig = {
       ...this.configurationFileContents,
+      pipelineOrder: [...this.configurationFileContents.pipelineOrder, branch],
       branches: {
         ...this.configurationFileContents.branches,
         [branch]: templateConfig
@@ -220,13 +305,8 @@ export default class RepoConfig extends CliElement {
     this.editedConfig = { ...this.currentEnvironmentConfig! };
   }
 
-  handleCancelEdit() {
-    this.isEditing = false;
-    this.editedConfig = undefined;
-  }
-
   handleSaveEdit() {
-    if (!this.currentBranch || !this.editedConfig) {
+    if (!this.selectedBranch || !this.editedConfig) {
       return;
     }
 
@@ -234,50 +314,18 @@ export default class RepoConfig extends CliElement {
       ...this.configurationFileContents!,
       branches: {
         ...this.configurationFileContents!.branches,
-        [this.currentBranch]: this.editedConfig
+        [this.selectedBranch]: this.editedConfig
       }
     };
 
-    const configString = JSON.stringify(updatedConfig, null, 2).replace(
-      /'/g,
-      "'\\''"
-    );
-    this.sendCommandToTerminal(this.commands.saveConfigFile(configString));
-    this.configurationFileContents = updatedConfig;
+    this.saveConfig(updatedConfig);
     this.isEditing = false;
     this.editedConfig = undefined;
   }
 
-  handleInputChange(event: CustomEvent) {
-    const target = event.target as HTMLInputElement;
-    if (!target?.dataset.field) {
-      return;
-    }
-
-    const field = target.dataset.field;
-    const value = target.value;
-
-    if (!this.editedConfig) {
-      return;
-    }
-
-    if (field.includes(".")) {
-      const [parent, child] = field.split(".");
-      if (parent === "testLevels") {
-        this.editedConfig = {
-          ...this.editedConfig,
-          testLevels: {
-            ...this.editedConfig.testLevels,
-            [child]: value
-          }
-        };
-      }
-    } else {
-      this.editedConfig = {
-        ...this.editedConfig,
-        [field]: value
-      };
-    }
+  handleCancelEdit() {
+    this.isEditing = false;
+    this.editedConfig = undefined;
   }
 
   handleModalCancel() {
@@ -291,11 +339,44 @@ export default class RepoConfig extends CliElement {
     Toast.show({ label, message: error, variant: "error" }, this);
   }
 
-  get branchOptions() {
-    return this.availableBranches.map((branch) => ({
-      label: branch,
-      value: branch
-    }));
+  private saveConfig(config = this.configurationFileContents) {
+    if (!config) return;
+
+    // Ensure all branches are in the pipeline order
+    const allBranches = Object.keys(config.branches);
+    const missingBranches = allBranches.filter(
+      (b) => !config.pipelineOrder.includes(b)
+    );
+
+    const updatedConfig = {
+      ...config,
+      pipelineOrder: [...config.pipelineOrder, ...missingBranches]
+    };
+
+    const configString = JSON.stringify(updatedConfig, null, 2).replace(
+      /'/g,
+      "'\\''"
+    );
+    this.sendCommandToTerminal(this.commands.saveConfigFile(configString));
+    this.configurationFileContents = updatedConfig;
+  }
+
+  get orderedBranches() {
+    if (!this.configurationFileContents) return [];
+
+    return this.configurationFileContents.pipelineOrder
+      .filter(
+        (branchName) => this.configurationFileContents!.branches[branchName]
+      )
+      .map((branchName, index) => ({
+        name: branchName,
+        label: this.configurationFileContents!.branches[branchName].label,
+        isFirst: index === 0,
+        isLast:
+          index === this.configurationFileContents!.pipelineOrder.length - 1,
+        isSelected: branchName === this.selectedBranch,
+        buttonVariant: branchName === this.selectedBranch ? "brand" : "neutral"
+      }));
   }
 
   get currentEnvironmentConfig() {

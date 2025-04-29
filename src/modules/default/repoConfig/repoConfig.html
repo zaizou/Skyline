@@ -1,6 +1,6 @@
 <template>
   <div class="slds-p-around_medium">
-    <lightning-card title="Repository Configuration" class="card-title">
+    <lightning-card title="Pipeline Configuration" class="card-title">
       <template if:true={isLoading}>
         <div class="slds-is-relative slds-p-around_medium">
           <lightning-spinner alternative-text="Loading"></lightning-spinner>
@@ -9,36 +9,88 @@
 
       <template if:false={isLoading}>
         <div class="slds-p-horizontal_medium">
-          <template if:true={currentBranch}>
-            <div
-              class="slds-text-heading_medium slds-p-bottom_medium slds-text-color_default"
-            >
-              Current Branch: {currentBranch}
+          <div class="slds-grid slds-grid_vertical">
+            <div class="slds-col slds-p-bottom_small">
+              <div class="slds-grid slds-grid_align-spread">
+                <div>
+                  <lightning-button-group>
+                    <lightning-button
+                      label="New"
+                      onclick={handleNewBranchClick}
+                    ></lightning-button>
+                    <lightning-button
+                      label="Delete"
+                      onclick={handleDeleteBranchConfig}
+                      disabled={isDeleteDisabled}
+                    ></lightning-button>
+                  </lightning-button-group>
+                </div>
+              </div>
             </div>
-          </template>
 
-          <div class="slds-grid slds-gutters slds-p-bottom_medium">
             <div class="slds-col">
-              <lightning-combobox
-                label="Select Branch Configuration"
-                value={selectedBranch}
-                options={branchOptions}
-                onchange={handleBranchChange}
-                class="branch-select"
-              ></lightning-combobox>
-            </div>
-            <div class="slds-col slds-text-align_right">
-              <lightning-button-group>
-                <lightning-button
-                  label="New"
-                  onclick={handleNewBranchClick}
-                ></lightning-button>
-                <lightning-button
-                  label="Delete"
-                  onclick={handleDeleteBranchConfig}
-                  disabled={isDeleteDisabled}
-                ></lightning-button>
-              </lightning-button-group>
+              <div class="slds-box slds-theme_default pipeline-container">
+                <div class="pipeline-flow">
+                  <template for:each={orderedBranches} for:item="branch">
+                    <div key={branch.name} class="pipeline-stage">
+                      <div
+                        class="pipeline-stage-content"
+                        data-selected={branch.isSelected}
+                      >
+                        <div class="branch-info">
+                          <div class="slds-text-heading_small">
+                            <lightning-icon
+                              icon-name="standard:environment_hub"
+                              size="small"
+                              class="slds-m-right_x-small"
+                            ></lightning-icon>
+                            {branch.name}
+                          </div>
+                          <div class="slds-text-body_small">
+                            <lightning-icon
+                              icon-name="utility:salesforce1"
+                              size="small"
+                              class="slds-m-right_x-small"
+                            ></lightning-icon>
+                            {branch.label}
+                          </div>
+                        </div>
+
+                        <div class="environment-config">
+                          <lightning-button
+                            label="Select"
+                            variant={branch.buttonVariant}
+                            data-branch={branch.name}
+                            onclick={handleBranchSelect}
+                          ></lightning-button>
+                        </div>
+
+                        <div class="reorder-controls">
+                          <lightning-button-icon
+                            icon-name="utility:left"
+                            variant="border-filled"
+                            alternative-text="Move Left"
+                            title="Move Left"
+                            onclick={handleMoveUp}
+                            data-branch={branch.name}
+                            disabled={branch.isFirst}
+                            class="slds-m-right_xx-small"
+                          ></lightning-button-icon>
+                          <lightning-button-icon
+                            icon-name="utility:right"
+                            variant="border-filled"
+                            alternative-text="Move Right"
+                            title="Move Right"
+                            onclick={handleMoveDown}
+                            data-branch={branch.name}
+                            disabled={branch.isLast}
+                          ></lightning-button-icon>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
             </div>
           </div>
 
