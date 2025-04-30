@@ -205,8 +205,10 @@
           </template>
 
           <template if:false={currentEnvironmentConfig}>
-            <div class="slds-text-color_error">
-              No configuration found for selected branch: {selectedBranch}
+            <div class="slds-box slds-theme_default">
+              <div class="slds-text-align_center slds-p-around_medium">
+                Select a branch to configure its environment settings
+              </div>
             </div>
           </template>
         </div>
