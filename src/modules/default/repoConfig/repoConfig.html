@@ -1,6 +1,35 @@
 <template>
   <div class="slds-p-around_medium">
     <lightning-card title="Pipeline Configuration" class="card-title">
+      <div slot="actions">
+        <div
+          class="slds-grid slds-grid_vertical-align-center slds-grid_align-end"
+        >
+          <div class="slds-col slds-p-right_x-small">
+            <lightning-button-group>
+              <lightning-button
+                label="New"
+                onclick={handleNewBranchClick}
+              ></lightning-button>
+              <lightning-button
+                label="Delete"
+                onclick={handleDeleteBranchConfig}
+                disabled={isDeleteDisabled}
+              ></lightning-button>
+            </lightning-button-group>
+          </div>
+          <div class="slds-col">
+            <lightning-button-icon
+              icon-name="utility:info"
+              variant="bare"
+              alternative-text="Show Information"
+              title="Show Information"
+              onclick={toggleInfoPanel}
+            ></lightning-button-icon>
+          </div>
+        </div>
+      </div>
+
       <template if:true={isLoading}>
         <div class="slds-is-relative slds-p-around_medium">
           <lightning-spinner alternative-text="Loading"></lightning-spinner>
@@ -9,25 +38,40 @@
 
       <template if:false={isLoading}>
         <div class="slds-p-horizontal_medium">
-          <div class="slds-grid slds-grid_vertical">
-            <div class="slds-col slds-p-bottom_small">
-              <div class="slds-grid slds-grid_align-spread">
-                <div>
-                  <lightning-button-group>
-                    <lightning-button
-                      label="New"
-                      onclick={handleNewBranchClick}
-                    ></lightning-button>
-                    <lightning-button
-                      label="Delete"
-                      onclick={handleDeleteBranchConfig}
-                      disabled={isDeleteDisabled}
-                    ></lightning-button>
-                  </lightning-button-group>
+          <template if:true={showInfoPanel}>
+            <div class="slds-box slds-theme_info slds-m-bottom_medium">
+              <div class="slds-grid slds-grid_vertical">
+                <div class="slds-col">
+                  <p class="slds-text-heading_small slds-p-bottom_small">
+                    Welcome to Pipeline Configuration
+                  </p>
+                  <p class="slds-text-body_regular">This page allows you to:</p>
+                  <ul
+                    class="slds-list_dotted slds-p-left_medium slds-p-top_x-small"
+                  >
+                    <li>
+                      Map Git branches to Salesforce environments for automated
+                      deployments
+                    </li>
+                    <li>
+                      Configure authentication details for each target
+                      Salesforce org
+                    </li>
+                    <li>
+                      Define the promotion order of components through your
+                      pipeline
+                    </li>
+                    <li>
+                      Set test levels for both presubmit validation and final
+                      deployments
+                    </li>
+                  </ul>
                 </div>
               </div>
             </div>
+          </template>
 
+          <div class="slds-grid slds-grid_vertical">
             <div class="slds-col">
               <div class="slds-box slds-theme_default pipeline-container">
                 <div class="pipeline-flow">

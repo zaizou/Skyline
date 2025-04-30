@@ -27,6 +27,7 @@ export default class RepoConfig extends CliElement {
   @track isEditing = false;
   @track editedConfig?: SalesforceEnvironmentConfig;
   @track showNewBranchModal = false;
+  @track showInfoPanel = false;
 
   private get commands() {
     // Normalize path separators for the current OS
@@ -330,6 +331,10 @@ export default class RepoConfig extends CliElement {
 
   handleModalCancel() {
     this.showNewBranchModal = false;
+  }
+
+  toggleInfoPanel() {
+    this.showInfoPanel = !this.showInfoPanel;
   }
 
   //  ▂▃▄▅▆▇█▓▒░ Private Methods ░▒▓█▇▆▅▄▃▂
