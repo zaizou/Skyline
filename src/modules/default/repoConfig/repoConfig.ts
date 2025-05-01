@@ -4,7 +4,8 @@ import Toast from "lightning-base-components/src/lightning/toast/toast.js";
 import CliElement from "../cliElement/cliElement";
 import type {
   SkylineConfig,
-  SalesforceEnvironmentConfig
+  SalesforceEnvironmentConfig,
+  TicketingSystemConfig
 } from "../../../types/config";
 
 const ELEMENT_IDENTIFIER = "repoConfig";
@@ -28,6 +29,9 @@ export default class RepoConfig extends CliElement {
   @track editedConfig?: SalesforceEnvironmentConfig;
   @track showNewBranchModal = false;
   @track showInfoPanel = false;
+  @track isEditingTicketing = false;
+  @track editedTicketingConfig?: TicketingSystemConfig;
+  @track showTicketingInfoPanel = false;
 
   private get commands() {
     // Normalize path separators for the current OS
@@ -107,7 +111,8 @@ export default class RepoConfig extends CliElement {
   handleOpenConfigurationFile(result: ExecuteResult) {
     if (result.stdout) {
       try {
-        this.configurationFileContents = JSON.parse(result.stdout);
+        const config = JSON.parse(result.stdout);
+        this.configurationFileContents = config;
       } catch (error) {
         this.handleError(
           "Invalid JSON in configuration file",
@@ -184,11 +189,15 @@ export default class RepoConfig extends CliElement {
   handleMoveUp(event: CustomEvent) {
     const target = event.target as HTMLElement;
     const branch = target.dataset.branch;
-    if (!branch || !this.configurationFileContents) return;
+    if (!branch || !this.configurationFileContents) {
+      return;
+    }
 
     const currentIndex =
       this.configurationFileContents.pipelineOrder.indexOf(branch);
-    if (currentIndex <= 0) return;
+    if (currentIndex <= 0) {
+      return;
+    }
 
     // Swap positions in the array
     const newOrder = [...this.configurationFileContents.pipelineOrder];
@@ -208,12 +217,18 @@ export default class RepoConfig extends CliElement {
   handleMoveDown(event: CustomEvent) {
     const target = event.target as HTMLElement;
     const branch = target.dataset.branch;
-    if (!branch || !this.configurationFileContents) return;
+    if (!branch || !this.configurationFileContents) {
+      return;
+    }
 
     const currentIndex =
       this.configurationFileContents.pipelineOrder.indexOf(branch);
-    if (currentIndex >= this.configurationFileContents.pipelineOrder.length - 1)
+    if (
+      currentIndex >=
+      this.configurationFileContents.pipelineOrder.length - 1
+    ) {
       return;
+    }
 
     // Swap positions in the array
     const newOrder = [...this.configurationFileContents.pipelineOrder];
@@ -265,7 +280,6 @@ export default class RepoConfig extends CliElement {
       return;
     }
 
-    // Create new branch config from template
     const templateConfig = {
       label: branch,
       instanceUrl: "https://test.salesforce.com",
@@ -281,7 +295,6 @@ export default class RepoConfig extends CliElement {
       }
     };
 
-    // Add branch to the end of the pipeline
     const updatedConfig = {
       ...this.configurationFileContents,
       pipelineOrder: [...this.configurationFileContents.pipelineOrder, branch],
@@ -291,10 +304,7 @@ export default class RepoConfig extends CliElement {
       }
     };
 
-    const configString = JSON.stringify(updatedConfig, null, 2).replace(
-      /'/g,
-      "'\\''"
-    );
+    const configString = JSON.stringify(updatedConfig, null, 2);
     this.sendCommandToTerminal(this.commands.saveConfigFile(configString));
     this.configurationFileContents = updatedConfig;
     this.selectedBranch = branch;
@@ -337,7 +347,132 @@ export default class RepoConfig extends CliElement {
     this.showInfoPanel = !this.showInfoPanel;
   }
 
+  toggleTicketingInfoPanel() {
+    this.showTicketingInfoPanel = !this.showTicketingInfoPanel;
+  }
+
+  handleTicketingSystemChange(event: CustomEvent) {
+    const system = event.detail.value;
+
+    if (!this.editedTicketingConfig) {
+      this.editedTicketingConfig = {
+        system,
+        ticketIdRegex: this.getDefaultRegexForSystem(system)
+      };
+    } else {
+      this.editedTicketingConfig = {
+        ...this.editedTicketingConfig,
+        system,
+        ticketIdRegex: this.getDefaultRegexForSystem(system)
+      };
+    }
+
+    // Clear custom label if not "Other"
+    if (system !== "Other") {
+      this.editedTicketingConfig.customLabel = undefined;
+    }
+  }
+
+  // Add method to handle custom regex input
+  handleTicketingRegexChange(event: CustomEvent) {
+    if (!this.editedTicketingConfig) {
+      return;
+    }
+
+    const regexPattern = event.detail.value;
+
+    // Validate the regex pattern
+    if (regexPattern) {
+      try {
+        // Test if the regex is valid by creating a RegExp object
+        new RegExp(regexPattern);
+
+        // If valid, update the config
+        this.editedTicketingConfig = {
+          ...this.editedTicketingConfig,
+          ticketIdRegex: regexPattern
+        };
+      } catch (error) {
+        // If invalid, show an error message
+        Toast.show(
+          {
+            label: "Invalid Regex Pattern",
+            message:
+              "The regular expression pattern is invalid. Please check your syntax.",
+            variant: "error"
+          },
+          this
+        );
+
+        // Don't update the config with invalid regex
+        return;
+      }
+    } else {
+      // Empty value is allowed
+      this.editedTicketingConfig = {
+        ...this.editedTicketingConfig,
+        ticketIdRegex: regexPattern
+      };
+    }
+  }
+
+  handleTicketingLabelChange(event: CustomEvent) {
+    if (!this.editedTicketingConfig) {
+      return;
+    }
+
+    this.editedTicketingConfig = {
+      ...this.editedTicketingConfig,
+      customLabel: event.detail.value
+    };
+  }
+
+  handleEditTicketingClick() {
+    this.isEditingTicketing = true;
+    this.editedTicketingConfig = this.configurationFileContents?.ticketing
+      ? { ...this.configurationFileContents.ticketing }
+      : {
+          system: "Jira",
+          ticketIdRegex: this.getDefaultRegexForSystem("Jira")
+        };
+  }
+
+  handleSaveTicketingEdit() {
+    if (!this.editedTicketingConfig) {
+      return;
+    }
+
+    const updatedConfig = {
+      ...this.configurationFileContents!,
+      ticketing: this.editedTicketingConfig
+    };
+
+    this.saveConfig(updatedConfig);
+    this.isEditingTicketing = false;
+    this.editedTicketingConfig = undefined;
+  }
+
+  handleCancelTicketingEdit() {
+    this.isEditingTicketing = false;
+    this.editedTicketingConfig = undefined;
+  }
+
   //  ▂▃▄▅▆▇█▓▒░ Private Methods ░▒▓█▇▆▅▄▃▂
+
+  private getDefaultRegexForSystem(system: string): string {
+    switch (system) {
+      case "Jira":
+        return "[A-Z]+-\\d+"; // Single escaped as it should appear in JavaScript
+      case "Asana":
+        return "\\d+"; // Single escaped as it should appear in JavaScript
+      case "Trello":
+        return "[a-zA-Z0-9]{8,}";
+      case "Other":
+        return "";
+      default:
+        return "";
+    }
+  }
 
   private handleError(error: string, label: string) {
     this.error = error;
@@ -345,29 +480,40 @@ export default class RepoConfig extends CliElement {
   }
 
   private saveConfig(config = this.configurationFileContents) {
-    if (!config) return;
+    if (!config) {
+      return;
+    }
 
-    // Ensure all branches are in the pipeline order
     const allBranches = Object.keys(config.branches);
     const missingBranches = allBranches.filter(
       (b) => !config.pipelineOrder.includes(b)
     );
 
-    const updatedConfig = {
-      ...config,
-      pipelineOrder: [...config.pipelineOrder, ...missingBranches]
-    };
-
-    const configString = JSON.stringify(updatedConfig, null, 2).replace(
-      /'/g,
-      "'\\''"
+    // Create a deep copy to avoid modifying the original
+    const updatedConfig = JSON.parse(
+      JSON.stringify({
+        ...config,
+        pipelineOrder: [...config.pipelineOrder, ...missingBranches]
+      })
     );
+
+    // Manually escape backslashes in regex patterns for JSON
+    if (updatedConfig.ticketing?.ticketIdRegex) {
+      updatedConfig.ticketing.ticketIdRegex =
+        updatedConfig.ticketing.ticketIdRegex.replace(/\\/g, "\\\\");
+    }
+
+    const configString = JSON.stringify(updatedConfig, null, 2);
     this.sendCommandToTerminal(this.commands.saveConfigFile(configString));
-    this.configurationFileContents = updatedConfig;
+
+    // Keep the original config in memory (with proper JavaScript regex)
+    this.configurationFileContents = config;
   }
 
   get orderedBranches() {
-    if (!this.configurationFileContents) return [];
+    if (!this.configurationFileContents) {
+      return [];
+    }
 
     return this.configurationFileContents.pipelineOrder
       .filter(
@@ -408,5 +554,33 @@ export default class RepoConfig extends CliElement {
     return this.configurationFileContents
       ? Object.keys(this.configurationFileContents.branches)
       : [];
+  }
+
+  get ticketingSystemOptions() {
+    return [
+      { label: "Jira", value: "Jira" },
+      { label: "Asana", value: "Asana" },
+      { label: "Trello", value: "Trello" },
+      { label: "Other", value: "Other" }
+    ];
+  }
+
+  get currentTicketingConfig() {
+    return this.configurationFileContents?.ticketing;
+  }
+
+  get ticketingSystemLabel() {
+    const config = this.currentTicketingConfig;
+    if (!config) {
+      return "Not configured";
+    }
+
+    return config.system === "Other" && config.customLabel
+      ? config.customLabel
+      : config.system;
+  }
+
+  get isOtherTicketingSystem() {
+    return this.editedTicketingConfig?.system === "Other";
   }
 }
