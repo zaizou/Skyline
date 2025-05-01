@@ -21,10 +21,17 @@ export interface SalesforceEnvironmentConfig {
   };
 }
 
+export interface TicketingSystemConfig {
+  system: string;
+  customLabel?: string;
+  ticketIdRegex: string;
+}
+
 export interface SkylineConfig {
   version: string;
   pipelineOrder: string[];
   branches: {
     [branchName: string]: SalesforceEnvironmentConfig;
   };
+  ticketing?: TicketingSystemConfig;
 }
