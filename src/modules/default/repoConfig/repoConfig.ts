@@ -263,14 +263,8 @@ export default class RepoConfig extends CliElement {
     };
     delete updatedConfig.branches[this.selectedBranch];
 
-    const configString = JSON.stringify(updatedConfig, null, 2).replace(
-      /'/g,
-      "'\\''"
-    );
-    this.sendCommandToTerminal(
-      this.commands.deleteBranchConfig(this.selectedBranch, configString)
-    );
-    this.configurationFileContents = updatedConfig;
+    // Use the same save method to ensure consistent handling
+    this.saveConfig(updatedConfig);
     this.selectedBranch = undefined;
   }
 
@@ -305,9 +299,7 @@ export default class RepoConfig extends CliElement {
       }
     };
 
-    const configString = JSON.stringify(updatedConfig, null, 2);
-    this.sendCommandToTerminal(this.commands.saveConfigFile(configString));
-    this.configurationFileContents = updatedConfig;
+    this.saveConfig(updatedConfig);
     this.selectedBranch = branch;
     this.showNewBranchModal = false;
   }
@@ -482,6 +474,19 @@ export default class RepoConfig extends CliElement {
     Toast.show({ label, message: error, variant: "error" }, this);
   }
 
+  private prepareConfigForSave(config: SkylineConfig): string {
+    // Create a deep copy to avoid modifying the original
+    const configForSave = JSON.parse(JSON.stringify(config));
+
+    // Ensure proper escaping of regex patterns
+    if (configForSave.ticketing?.ticketIdRegex) {
+      configForSave.ticketing.ticketIdRegex =
+        configForSave.ticketing.ticketIdRegex.replace(/\\/g, "\\\\");
+    }
+
+    return JSON.stringify(configForSave, null, 2).replace(/'/g, "'\\''");
+  }
+
   private saveConfig(config = this.configurationFileContents) {
     if (!config) {
       return;
@@ -492,25 +497,18 @@ export default class RepoConfig extends CliElement {
       (b) => !config.pipelineOrder.includes(b)
     );
 
-    // Create a deep copy to avoid modifying the original
-    const updatedConfig = JSON.parse(
-      JSON.stringify({
-        ...config,
-        pipelineOrder: [...config.pipelineOrder, ...missingBranches]
-      })
-    );
+    // Create updated config with any missing branches added to pipeline order
+    const updatedConfig = {
+      ...config,
+      pipelineOrder: [...config.pipelineOrder, ...missingBranches]
+    };
 
-    // Manually escape backslashes in regex patterns for JSON
-    if (updatedConfig.ticketing?.ticketIdRegex) {
-      updatedConfig.ticketing.ticketIdRegex =
-        updatedConfig.ticketing.ticketIdRegex.replace(/\\/g, "\\\\");
-    }
-
-    const configString = JSON.stringify(updatedConfig, null, 2);
+    // Prepare config string with proper escaping
+    const configString = this.prepareConfigForSave(updatedConfig);
     this.sendCommandToTerminal(this.commands.saveConfigFile(configString));
 
     // Keep the original config in memory (with proper JavaScript regex)
-    this.configurationFileContents = config;
+    this.configurationFileContents = updatedConfig;
   }
 
   get orderedBranches() {

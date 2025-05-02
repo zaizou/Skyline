@@ -1,5 +1,8 @@
 import { LightningElement, track } from "lwc";
-import type { SkylineConfig } from "../../../types/config";
+import type {
+  SkylineConfig,
+  SalesforceEnvironmentConfig
+} from "../../../types/config";
 import CliElement from "../cliElement/cliElement";
 import { ExecuteResult } from "../app/app";
 import Toast from "lightning-base-components/src/lightning/toast/toast.js";
@@ -24,21 +27,43 @@ interface PullRequest {
   files: PullRequestFile[];
   bodySectionName?: string;
   filesSectionName?: string;
+  createdAt: string;
+  state: string;
+  closedAt?: string;
+  stateBadgeClass: string;
+}
+
+interface BranchConfig {
+  label: string;
+  instanceUrl: string;
+  username: string;
+  // ... other config properties if needed
+}
+
+interface SkylineConfig {
+  pipelineOrder: string[];
+  branchConfigs: { [key: string]: BranchConfig };
+  // ... other config properties
 }
 
 interface GroupedPR {
   key: string; // branch name
   value: PullRequest[];
+  isOrderedBranch: boolean;
+  containerClass: string;
+  label?: string; // org label from config
+  branchIcon: string;
+  orgIcon: string;
 }
 
 export default class Pipeline extends CliElement {
-  @track ticketId = "";
-  @track isSearchEnabled = false;
+  @track searchTerm = "";
   @track configurationFileContents?: SkylineConfig;
   @track isLoading = true;
   @track searchMessage = "";
   @track pullRequests: PullRequest[] = [];
   @track activeSections: string[] = [];
+  @track orderedBranches: string[] = [];
 
   get groupedPullRequests(): GroupedPR[] {
     const groups = this.pullRequests.reduce(
@@ -52,10 +77,40 @@ export default class Pipeline extends CliElement {
       {}
     );
 
-    return Object.entries(groups).map(([key, value]) => ({
-      key,
-      value
-    }));
+    // Create ordered groups first
+    const orderedGroups = this.orderedBranches.map((branch) => {
+      const branchConfig = this.configurationFileContents?.branches?.[branch];
+      return {
+        key: branch,
+        value: groups[branch] || [],
+        isOrderedBranch: true,
+        containerClass: "slds-box slds-box_x-small slds-m-bottom_medium",
+        label: branchConfig?.label || "No Salesforce Org",
+        branchIcon: "standard:environment_hub",
+        orgIcon: "utility:salesforce1"
+      };
+    });
+
+    // Find unordered branches and add them to the end
+    const unorderedBranches = Object.keys(groups).filter(
+      (branch) => !this.orderedBranches.includes(branch)
+    );
+
+    const unorderedGroups = unorderedBranches.map((branch) => {
+      const branchConfig = this.configurationFileContents?.branches?.[branch];
+      return {
+        key: branch,
+        value: groups[branch],
+        isOrderedBranch: false,
+        containerClass:
+          "slds-box slds-box_x-small slds-m-bottom_medium slds-theme_shade slds-theme_alert-texture",
+        label: branchConfig?.label || "No Salesforce Org",
+        branchIcon: "standard:environment_hub",
+        orgIcon: "utility:salesforce1"
+      };
+    });
+
+    return [...orderedGroups, ...unorderedGroups];
   }
 
   get hasResults(): boolean {
@@ -67,13 +122,13 @@ export default class Pipeline extends CliElement {
   }
 
   get searchIsDisabled() {
-    return !this.isSearchEnabled || !this.ticketId;
+    return !this.searchTerm;
   }
 
   private get commands() {
     return {
       openConfigurationFile: `cat ${CONFIGURATION_FILE_NAME}`,
-      searchPullRequests: `gh pr list --json number,title,body,baseRefName,url,files --search "${this.ticketId}" --state all`
+      searchPullRequests: `gh pr list --json number,title,body,baseRefName,url,files,createdAt,state,closedAt --search "${this.searchTerm}" --state all`
     };
   }
 
@@ -98,6 +153,8 @@ export default class Pipeline extends CliElement {
     if (result.stdout) {
       try {
         this.configurationFileContents = JSON.parse(result.stdout);
+        this.orderedBranches =
+          this.configurationFileContents?.pipelineOrder || [];
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
@@ -107,24 +164,7 @@ export default class Pipeline extends CliElement {
   }
 
   handleTicketIdChange(event: CustomEvent) {
-    this.ticketId = event.detail.value;
-    this.validateTicketId();
-  }
-
-  validateTicketId() {
-    if (!this.configurationFileContents?.ticketing?.ticketIdRegex) {
-      this.isSearchEnabled = false;
-      return;
-    }
-
-    try {
-      const regex = new RegExp(
-        this.configurationFileContents.ticketing.ticketIdRegex
-      );
-      this.isSearchEnabled = regex.test(this.ticketId);
-    } catch (error) {
-      this.isSearchEnabled = false;
-    }
+    this.searchTerm = event.detail.value;
   }
 
   handleSearch() {
@@ -136,15 +176,32 @@ export default class Pipeline extends CliElement {
       try {
         const pullRequests = JSON.parse(result.stdout);
         if (pullRequests.length === 0) {
-          this.searchMessage = `No changes found with reference to ticket ${this.ticketId}`;
+          this.searchMessage = `No changes found matching "${this.searchTerm}"`;
           this.pullRequests = [];
         } else {
           this.searchMessage = "";
-          this.pullRequests = pullRequests.map((pr: PullRequest) => ({
-            ...pr,
-            bodySectionName: `${pr.number}_body`,
-            filesSectionName: `${pr.number}_files`
-          }));
+          // Sort PRs by state (OPEN first) and then by createdAt date
+          this.pullRequests = pullRequests
+            .sort((a: PullRequest, b: PullRequest) => {
+              // First compare by state
+              if (a.state === "OPEN" && b.state !== "OPEN") return -1;
+              if (a.state !== "OPEN" && b.state === "OPEN") return 1;
+
+              // If states are the same, sort by date (newest first)
+              return (
+                new Date(b.createdAt).getTime() -
+                new Date(a.createdAt).getTime()
+              );
+            })
+            .map((pr: PullRequest) => ({
+              ...pr,
+              bodySectionName: `${pr.number}_body`,
+              filesSectionName: `${pr.number}_files`,
+              stateBadgeClass:
+                pr.state === "OPEN"
+                  ? "slds-badge slds-theme_success"
+                  : "slds-badge"
+            }));
         }
       } catch (error) {
         const errorMessage =
@@ -158,13 +215,6 @@ export default class Pipeline extends CliElement {
 
   private async handleError(error: string, label: string) {
     Toast.show({ label: label, message: error, variant: "error" }, this);
-  }
-
-  get expectedRegexPattern(): string {
-    return (
-      this.configurationFileContents?.ticketing?.ticketIdRegex ||
-      "No regex pattern configured"
-    );
   }
 
   handleSectionToggle(event: CustomEvent) {
