@@ -463,11 +463,13 @@ export default class RepoConfig extends CliElement {
   private getDefaultRegexForSystem(system: string): string {
     switch (system) {
       case "Jira":
-        return "[A-Z]+-\\d+"; // Single escaped as it should appear in JavaScript
+        return "[A-Z]+-\\d+";
       case "Asana":
-        return "\\d+"; // Single escaped as it should appear in JavaScript
+        return "\\d+";
       case "Trello":
         return "[a-zA-Z0-9]{8,}";
+      case "GitHub":
+        return "#\\d+";
       case "Other":
         return "";
       default:
@@ -562,6 +564,7 @@ export default class RepoConfig extends CliElement {
       { label: "Jira", value: "Jira" },
       { label: "Asana", value: "Asana" },
       { label: "Trello", value: "Trello" },
+      { label: "GitHub", value: "GitHub" },
       { label: "Other", value: "Other" }
     ];
   }

@@ -15,7 +15,8 @@ import CLIElement from "../cliElement/cliElement";
 export enum Pages {
   home = "Home",
   repoConfig = "Project Configuration",
-  metadataExplorer = "Metadata Explorer"
+  metadataExplorer = "Metadata Explorer",
+  pipeline = "Pipeline"
 }
 
 /**
@@ -112,5 +113,9 @@ export default class App extends LightningElement {
    */
   get showRepoConfig() {
     return this.currentPage === Pages.repoConfig;
+  }
+
+  get showPipeline() {
+    return this.currentPage === Pages.pipeline;
   }
 }

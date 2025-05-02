@@ -15,5 +15,8 @@
         data-handler="metadataExplorer"
       ></default-metadata-explorer>
     </template>
+    <template lwc:if={showPipeline}>
+      <default-pipeline data-handler="pipeline"></default-pipeline>
+    </template>
   </div>
 </template>

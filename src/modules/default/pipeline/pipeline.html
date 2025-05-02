@@ -1,0 +1,145 @@
+<template>
+  <div class="slds-p-around_medium slds-text-color_default">
+    <lightning-card title="Pipeline">
+      <div class="slds-p-around_medium">
+        <div class="slds-grid slds-grid_align-center">
+          <div class="slds-col slds-size_2-of-3">
+            <div class="slds-form-element">
+              <div
+                class="slds-form-element__control slds-input-has-icon slds-input-has-icon_left"
+              >
+                <lightning-icon
+                  icon-name="utility:search"
+                  size="x-small"
+                  class="slds-icon slds-input__icon slds-input__icon_left"
+                ></lightning-icon>
+                <lightning-input
+                  type="text"
+                  label="Enter Ticket Id"
+                  value={ticketId}
+                  onchange={handleTicketIdChange}
+                  placeholder={expectedRegexPattern}
+                  variant="label-hidden"
+                ></lightning-input>
+              </div>
+            </div>
+            <div class="slds-align_absolute-center slds-p-top_small">
+              <lightning-button
+                label="Search"
+                onclick={handleSearch}
+                disabled={searchIsDisabled}
+                variant="brand"
+              ></lightning-button>
+            </div>
+          </div>
+        </div>
+
+        <template if:true={isLoading}>
+          <div class="slds-is-relative slds-p-around_medium">
+            <lightning-spinner
+              alternative-text="Loading"
+              size="small"
+            ></lightning-spinner>
+          </div>
+        </template>
+        <template if:false={isLoading}>
+          <div class="slds-form-element">
+            <template if:true={searchMessage}>
+              <div class="slds-text-color_weak slds-p-top_small">
+                {searchMessage}
+              </div>
+            </template>
+
+            <template if:true={hasResults}>
+              <div class="slds-p-top_medium">
+                <div class="slds-grid slds-gutters">
+                  <template
+                    for:each={groupedPullRequests}
+                    for:item="group"
+                    for:key="branchName"
+                  >
+                    <div
+                      key={group.key}
+                      class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_4-of-12"
+                    >
+                      <div
+                        class="slds-box slds-box_x-small slds-m-bottom_medium"
+                      >
+                        <div
+                          class="slds-text-heading_small slds-p-bottom_small"
+                        >
+                          {group.key}
+                        </div>
+                        <template for:each={group.value} for:item="pr">
+                          <div
+                            key={pr.number}
+                            class="slds-box slds-box_xx-small slds-m-bottom_x-small"
+                          >
+                            <div class="slds-text-heading_small">
+                              <a href={pr.url} target="_blank"
+                                >PR #{pr.number}</a
+                              >
+                            </div>
+                            <div class="slds-text-body_regular">{pr.title}</div>
+
+                            <lightning-accordion
+                              class="slds-p-top_x-small"
+                              allow-multiple-sections-open
+                              active-sections-name={activeSections}
+                              onsectiontoggle={handleSectionToggle}
+                            >
+                              <lightning-accordion-section
+                                name={pr.bodySectionName}
+                                label="Body"
+                              >
+                                <div
+                                  class="slds-text-body_regular slds-p-around_x-small"
+                                >
+                                  {pr.body}
+                                </div>
+                              </lightning-accordion-section>
+                              <lightning-accordion-section
+                                name={pr.filesSectionName}
+                                label="Files"
+                              >
+                                <ul class="slds-has-dividers_bottom-space">
+                                  <template for:each={pr.files} for:item="file">
+                                    <li key={file.path} class="slds-item">
+                                      <div
+                                        class="slds-grid slds-grid_vertical-align-center"
+                                      >
+                                        <div class="slds-col">
+                                          <span
+                                            class="slds-text-body_small slds-truncate slds-line-clamp_medium"
+                                          >
+                                            <div
+                                              class="slds-hyphenate"
+                                              style="
+                                                word-wrap: break-word;
+                                                word-break: break-all;
+                                              "
+                                            >
+                                              {file.path}
+                                            </div>
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </li>
+                                  </template>
+                                </ul>
+                              </lightning-accordion-section>
+                            </lightning-accordion>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+    </lightning-card>
+  </div>
+</template>
