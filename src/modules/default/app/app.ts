@@ -6,8 +6,15 @@
  * to the appropriate child components.
  */
 
-import { LightningElement } from "lwc";
+import { LightningElement, track } from "lwc";
 import CLIElement from "../cliElement/cliElement";
+
+declare global {
+  interface Window {
+    vsCodeConfig: any;
+    extensionPath: string;
+  }
+}
 
 /**
  * Enum representing the different pages within the application.
@@ -37,7 +44,8 @@ export interface ExecuteResult {
 export default class App extends LightningElement {
   private static instance?: App;
   private static vscode = eval("acquireVsCodeApi()");
-  currentPage = Pages.home;
+  @track currentPage = Pages.home;
+  @track config: any;
 
   /**
    * Constructor for the App component. Sets the singleton instance.
@@ -45,6 +53,7 @@ export default class App extends LightningElement {
   constructor() {
     super();
     App.instance = this;
+    this.config = window.vsCodeConfig || {};
   }
 
   /**
@@ -56,6 +65,22 @@ export default class App extends LightningElement {
       App.instance = new App();
     }
     return App.instance;
+  }
+
+  /**
+   * Gets the current configuration values.
+   * @returns The configuration object.
+   */
+  static getConfig(): any {
+    return App.getInstance().config;
+  }
+
+  /**
+   * Checks if debug mode is enabled.
+   * @returns True if debug mode is enabled, false otherwise.
+   */
+  static isDebugMode(): boolean {
+    return !!App.getConfig().debugMode;
   }
 
   /**
@@ -71,6 +96,11 @@ export default class App extends LightningElement {
       );
       (element as unknown as CLIElement).handleExecuteResult(result);
     }
+
+    // Log in debug mode
+    if (App.isDebugMode()) {
+      console.log("[DEBUG] Command result:", result);
+    }
   }
 
   /**
@@ -79,6 +109,12 @@ export default class App extends LightningElement {
    * @param elementId The ID of the component that initiated the command.
    */
   static sendCommandToTerminal(command: string, elementId?: string) {
+    // Log in debug mode
+    if (App.isDebugMode()) {
+      console.log(
+        `[DEBUG] Sending command: ${command}, elementId: ${elementId}`
+      );
+    }
     App.vscode.postMessage({ command, elementId });
   }
 

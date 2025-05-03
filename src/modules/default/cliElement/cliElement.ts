@@ -39,4 +39,20 @@ export default class CliElement extends LightningElement {
   sendCommandToTerminal(command: string) {
     App.sendCommandToTerminal(command, this.getElementIdentifier());
   }
+
+  /**
+   * Checks if debug mode is enabled in configuration.
+   * @returns {boolean} True if debug mode is enabled.
+   */
+  get isDebugMode(): boolean {
+    return App.isDebugMode();
+  }
+
+  /**
+   * Gets the current configuration settings.
+   * @returns {any} The configuration object.
+   */
+  get config(): any {
+    return App.getConfig();
+  }
 }

@@ -17,7 +17,17 @@
         "command": "skyline.launch",
         "title": "Skyline"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Skyline",
+      "properties": {
+        "skyline.debugMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable debug mode for additional logging and diagnostics"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",

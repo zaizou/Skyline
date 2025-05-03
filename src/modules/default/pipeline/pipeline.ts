@@ -1,8 +1,5 @@
-import { LightningElement, track } from "lwc";
-import type {
-  SkylineConfig,
-  SalesforceEnvironmentConfig
-} from "../../../types/config";
+import { track } from "lwc";
+import type { SkylineConfig } from "../../../types/config";
 import CliElement from "../cliElement/cliElement";
 import { ExecuteResult } from "../app/app";
 import Toast from "lightning-base-components/src/lightning/toast/toast.js";
@@ -37,13 +34,6 @@ interface BranchConfig {
   label: string;
   instanceUrl: string;
   username: string;
-  // ... other config properties if needed
-}
-
-interface SkylineConfig {
-  pipelineOrder: string[];
-  branchConfigs: { [key: string]: BranchConfig };
-  // ... other config properties
 }
 
 interface GroupedPR {

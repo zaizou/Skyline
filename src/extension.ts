@@ -62,6 +62,10 @@ function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri) {
   // Add extensionPath to window object
   const extensionPath = extensionUri.fsPath;
 
+  // Get configuration settings
+  const config = vscode.workspace.getConfiguration("skyline");
+  const configJSON = JSON.stringify(config);
+
   return /*html */ `<!DOCTYPE html>
     <html lang="en">
       <head>
@@ -79,6 +83,10 @@ function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri) {
         />
         <script>
           window.extensionPath = "${extensionPath.replace(/\\/g, "\\\\")}";
+          window.vsCodeConfig = JSON.parse('${configJSON.replace(
+            /'/g,
+            "\\'"
+          )}');
         </script>
       </head>
       <body>

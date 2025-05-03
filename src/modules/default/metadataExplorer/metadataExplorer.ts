@@ -736,8 +736,9 @@ export default class MetadataExplorer extends CliElement {
    * Returns undefined if there are no spinner messages.
    */
   get spinnerDisplayText(): string[] | undefined {
-    return this.spinnerMessages.size > 0
-      ? Array.from(this.spinnerMessages)
-      : undefined;
+    if (this.spinnerMessages.size === 0) {
+      return undefined;
+    }
+    return this.isDebugMode ? Array.from(this.spinnerMessages) : [];
   }
 }

@@ -1,6 +1,21 @@
 <template>
   <div class="slds-p-around_medium slds-text-color_default">
     <lightning-card title="Metadata Explorer">
+      <template if:true={spinnerDisplayText}>
+        <div class="slds-spinner_container slds-is-fixed">
+          <lightning-spinner
+            alternative-text="Loading"
+            size="small"
+          ></lightning-spinner>
+          <div class="slds-spinner-text slds-p-top_large">
+            <ul>
+              <template for:each={spinnerDisplayText} for:item="item">
+                <li key={item}>{item}</li>
+              </template>
+            </ul>
+          </div>
+        </div>
+      </template>
       <template lwc:if={renderRetrieve}>
         <lightning-button
           label="Retrieve"
@@ -89,27 +104,6 @@
         </div>
       </template>
     </lightning-card>
-    <template lwc:if={spinnerDisplayText}>
-      <div class="slds-backdrop slds-backdrop_open">
-        <div class="slds-spinner_container">
-          <div
-            class="slds-spinner_brand slds-spinner slds-spinner_large slds-is-relative"
-          >
-            <span class="slds-assistive-text">Loading</span>
-            <div class="slds-spinner__dot-a"></div>
-            <div class="slds-spinner__dot-b"></div>
-          </div>
-
-          <div class="slds-spinner-text slds-p-top_large">
-            <ul>
-              <template for:each={spinnerDisplayText} for:item="item">
-                <li key={item}>{item}</li>
-              </template>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </template>
   </div>
   <div class="slds-hidden">{refreshView}</div>
 </template>
