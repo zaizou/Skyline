@@ -1,4 +1,4 @@
-import { api, track } from "lwc";
+import { track } from "lwc";
 import { ExecuteResult } from "../app/app";
 import Toast from "lightning-base-components/src/lightning/toast/toast.js";
 import CliElement from "../cliElement/cliElement";
@@ -8,7 +8,6 @@ import type {
   TicketingSystemConfig
 } from "../../../types/config";
 
-const ELEMENT_IDENTIFIER = "repoConfig";
 const CONFIGURATION_FILE_NAME = "skyline.config.json";
 const TEMPLATE_PATH = "templates/skyline.config.json";
 
@@ -24,7 +23,7 @@ export default class RepoConfig extends CliElement {
   @track availableBranches: string[] = [];
   @track selectedBranch?: string;
   @track error?: string;
-  @track isLoading = true;
+  @track isLoading = false;
   @track isEditing = false;
   @track editedConfig?: SalesforceEnvironmentConfig;
   @track showNewBranchModal = false;
@@ -52,60 +51,50 @@ export default class RepoConfig extends CliElement {
   }
 
   connectedCallback(): void {
-    this.sendCommandToTerminal(this.commands.findConfigurationFile);
-    this.sendCommandToTerminal(this.commands.getCurrentBranch);
-    this.sendCommandToTerminal(this.commands.getAllBranches);
+    this.initializeConfig();
+  }
+
+  private async initializeConfig(): Promise<void> {
+    try {
+      this.isLoading = true;
+      const [findResult, branchResult, branchesResult] = await Promise.all([
+        this.executeCommand(this.commands.findConfigurationFile),
+        this.executeCommand(this.commands.getCurrentBranch),
+        this.executeCommand(this.commands.getAllBranches)
+      ]);
+
+      this.handleFindConfigurationFile(findResult);
+      this.handleGetCurrentBranch(branchResult);
+      this.handleGetAllBranches(branchesResult);
+    } catch (error) {
+      this.handleError(
+        "Failed to initialize configuration",
+        "Initialization Error"
+      );
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   //  ▂▃▄▅▆▇█▓▒░ Public Methods ░▒▓█▇▆▅▄▃▂
 
-  /**
-   * Handles execute results from the terminal.
-   * Dispatches the result to the appropriate handler based on the command prefix.
-   * @param result The execution result from the terminal.
-   */
-  @api
-  handleExecuteResult(result: ExecuteResult) {
-    const command = result.command;
-    switch (command) {
-      case this.commands.findConfigurationFile:
-        this.handleFindConfigurationFile(result);
-        break;
-      case this.commands.openConfigurationFile:
-        this.handleOpenConfigurationFile(result);
-        break;
-      case this.commands.getCurrentBranch:
-        this.handleGetCurrentBranch(result);
-        break;
-      case this.commands.createConfigFile:
-        this.handleCreateConfigFile(result);
-        break;
-      case this.commands.getAllBranches:
-        this.handleGetAllBranches(result);
-        break;
-    }
-    this.isLoading = false;
-  }
-
-  /**
-   * Returns the unique identifier for this component.
-   * This identifier is used to distinguish between different components when handling
-   * command results from the terminal.
-   * @returns {string} The element identifier.
-   */
-  getElementIdentifier() {
-    return ELEMENT_IDENTIFIER;
-  }
-
   //  ▂▃▄▅▆▇█▓▒░ Event Handlers ░▒▓█▇▆▅▄▃▂
 
   handleFindConfigurationFile(result: ExecuteResult) {
+    this.isLoading = true;
     if (result.errorCode) {
       // File doesn't exist, create it from template
-      this.sendCommandToTerminal(this.commands.createConfigFile);
+      this.executeCommand(this.commands.createConfigFile)
+        .then(this.handleCreateConfigFile.bind(this))
+        .catch((error) =>
+          this.handleError(error, "Error creating config file")
+        );
     } else {
-      this.sendCommandToTerminal(this.commands.openConfigurationFile);
+      this.executeCommand(this.commands.openConfigurationFile)
+        .then(this.handleOpenConfigurationFile.bind(this))
+        .catch((error) => this.handleError(error, "Error opening config file"));
     }
+    this.isLoading = false;
   }
 
   handleOpenConfigurationFile(result: ExecuteResult) {
@@ -134,7 +123,11 @@ export default class RepoConfig extends CliElement {
     if (result.stderr) {
       this.handleError(result.stderr, "Error creating configuration file");
     } else {
-      this.sendCommandToTerminal(this.commands.openConfigurationFile);
+      this.isLoading = true;
+      this.executeCommand(this.commands.openConfigurationFile)
+        .then(this.handleOpenConfigurationFile.bind(this))
+        .catch((error) => this.handleError(error, "Error opening config file"));
+      this.isLoading = false;
     }
   }
 
@@ -505,10 +498,14 @@ export default class RepoConfig extends CliElement {
 
     // Prepare config string with proper escaping
     const configString = this.prepareConfigForSave(updatedConfig);
-    this.sendCommandToTerminal(this.commands.saveConfigFile(configString));
-
-    // Keep the original config in memory (with proper JavaScript regex)
-    this.configurationFileContents = updatedConfig;
+    this.isLoading = true;
+    this.executeCommand(this.commands.saveConfigFile(configString))
+      .then(() => {
+        // Keep the original config in memory (with proper JavaScript regex)
+        this.configurationFileContents = updatedConfig;
+      })
+      .catch((error) => this.handleError(error, "Error saving configuration"));
+    this.isLoading = false;
   }
 
   get orderedBranches() {

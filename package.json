@@ -66,6 +66,8 @@
   },
   "dependencies": {
     "@salesforce-ux/design-system": "^2.25.3",
-    "lightning-base-components": "^1.22.1-alpha"
+    "@types/uuid": "^10.0.0",
+    "lightning-base-components": "^1.22.1-alpha",
+    "uuid": "^11.1.0"
   }
 }

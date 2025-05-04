@@ -8,6 +8,7 @@
 
 import { LightningElement, track } from "lwc";
 import CLIElement from "../cliElement/cliElement";
+import { v4 as uuidv4 } from "uuid";
 
 declare global {
   interface Window {
@@ -34,6 +35,7 @@ export interface ExecuteResult {
   stdout?: string;
   stderr?: string;
   elementId?: string;
+  requestId?: string;
   errorCode?: number;
 }
 
@@ -46,6 +48,10 @@ export default class App extends LightningElement {
   private static vscode = eval("acquireVsCodeApi()");
   @track currentPage = Pages.home;
   @track config: any;
+  private static pendingResolvers: Map<
+    string,
+    (result: ExecuteResult) => void
+  > = new Map();
 
   /**
    * Constructor for the App component. Sets the singleton instance.
@@ -84,38 +90,43 @@ export default class App extends LightningElement {
   }
 
   /**
+   * Executes a command and returns a promise that resolves with the result.
+   * @param command The command to execute.
+   * @param elementId The ID of the element that initiated the command.
+   * @returns A promise that resolves with the command execution result.
+   */
+  static async executeCommand(command: string): Promise<ExecuteResult> {
+    const requestId = uuidv4();
+
+    return new Promise<ExecuteResult>((resolve) => {
+      App.pendingResolvers.set(requestId, resolve);
+      App.vscode.postMessage({ command, requestId });
+
+      // Log in debug mode
+      if (App.isDebugMode()) {
+        console.log(
+          `[DEBUG] Sending command: ${command}, requestId: ${requestId}`
+        );
+      }
+    });
+  }
+
+  /**
    * Handles command results received from the VS Code extension.
-   * Dispatches the result to the appropriate child component based on the elementId.
+   * Dispatches the result to the appropriate resolver based on the requestId.
    * @param result The command execution result.
    */
   static handleCommandResult(result: ExecuteResult) {
-    const app = App.getInstance();
-    if (result.elementId) {
-      const element = app.template!.querySelector(
-        `[data-handler="${result.elementId}"]`
-      );
-      (element as unknown as CLIElement).handleExecuteResult(result);
+    // Try to resolve a pending promise first
+    if (result.requestId && App.pendingResolvers.has(result.requestId)) {
+      App.pendingResolvers.get(result.requestId)!(result);
+      App.pendingResolvers.delete(result.requestId);
     }
 
     // Log in debug mode
     if (App.isDebugMode()) {
       console.log("[DEBUG] Command result:", result);
     }
-  }
-
-  /**
-   * Sends a command to the VS Code extension for execution.
-   * @param command The command to execute.
-   * @param elementId The ID of the component that initiated the command.
-   */
-  static sendCommandToTerminal(command: string, elementId?: string) {
-    // Log in debug mode
-    if (App.isDebugMode()) {
-      console.log(
-        `[DEBUG] Sending command: ${command}, elementId: ${elementId}`
-      );
-    }
-    App.vscode.postMessage({ command, elementId });
   }
 
   /**

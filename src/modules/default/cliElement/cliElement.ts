@@ -23,21 +23,12 @@ export default class CliElement extends LightningElement {
   }
 
   /**
-   * Retrieves the unique identifier for this element.
-   * Child classes must implement this method to provide their specific identifier.
-   * @returns {string} The unique identifier for this element.
-   * @throws {Error} Throws an error if not implemented by a child component.
+   * Executes a command and returns a promise that resolves with the result.
+   * @param command The command to execute.
+   * @returns A promise that resolves with the command execution result.
    */
-  getElementIdentifier(): string {
-    throw new Error("Method not implemented.");
-  }
-
-  /**
-   * Sends a command to the terminal for execution.
-   * @param {string} command The command to execute.
-   */
-  sendCommandToTerminal(command: string) {
-    App.sendCommandToTerminal(command, this.getElementIdentifier());
+  async executeCommand(command: string): Promise<ExecuteResult> {
+    return App.executeCommand(command);
   }
 
   /**

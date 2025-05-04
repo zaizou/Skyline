@@ -5,7 +5,13 @@ import { ExecuteResult } from "../app/app";
 import Toast from "lightning-base-components/src/lightning/toast/toast.js";
 
 const CONFIGURATION_FILE_NAME = "skyline.config.json";
-const ELEMENT_IDENTIFIER = "pipeline";
+const OPEN_PR_STATE = "OPEN";
+
+const COMMANDS = {
+  openConfigurationFile: `cat ${CONFIGURATION_FILE_NAME}`,
+  searchPullRequests: (searchTerm: string) =>
+    `gh pr list --json number,title,body,baseRefName,url,files,createdAt,state,closedAt --search "${searchTerm}" --state all`
+};
 
 interface PullRequestFile {
   path: string;
@@ -30,12 +36,6 @@ interface PullRequest {
   stateBadgeClass: string;
 }
 
-interface BranchConfig {
-  label: string;
-  instanceUrl: string;
-  username: string;
-}
-
 interface GroupedPR {
   key: string; // branch name
   value: PullRequest[];
@@ -55,91 +55,35 @@ export default class Pipeline extends CliElement {
   @track activeSections: string[] = [];
   @track orderedBranches: string[] = [];
 
-  get groupedPullRequests(): GroupedPR[] {
-    const groups = this.pullRequests.reduce(
-      (groups: { [key: string]: PullRequest[] }, pr) => {
-        if (!groups[pr.baseRefName]) {
-          groups[pr.baseRefName] = [];
-        }
-        groups[pr.baseRefName].push(pr);
-        return groups;
-      },
-      {}
-    );
-
-    // Create ordered groups first
-    const orderedGroups = this.orderedBranches.map((branch) => {
-      const branchConfig = this.configurationFileContents?.branches?.[branch];
-      return {
-        key: branch,
-        value: groups[branch] || [],
-        isOrderedBranch: true,
-        containerClass: "slds-box slds-box_x-small slds-m-bottom_medium",
-        label: branchConfig?.label || "No Salesforce Org",
-        branchIcon: "standard:environment_hub",
-        orgIcon: "utility:salesforce1"
-      };
-    });
-
-    // Find unordered branches and add them to the end
-    const unorderedBranches = Object.keys(groups).filter(
-      (branch) => !this.orderedBranches.includes(branch)
-    );
-
-    const unorderedGroups = unorderedBranches.map((branch) => {
-      const branchConfig = this.configurationFileContents?.branches?.[branch];
-      return {
-        key: branch,
-        value: groups[branch],
-        isOrderedBranch: false,
-        containerClass:
-          "slds-box slds-box_x-small slds-m-bottom_medium slds-theme_shade slds-theme_alert-texture",
-        label: branchConfig?.label || "No Salesforce Org",
-        branchIcon: "standard:environment_hub",
-        orgIcon: "utility:salesforce1"
-      };
-    });
-
-    return [...orderedGroups, ...unorderedGroups];
-  }
-
-  get hasResults(): boolean {
-    return this.pullRequests.length > 0;
-  }
-
   connectedCallback() {
     this.loadConfiguration();
   }
 
-  get searchIsDisabled() {
-    return !this.searchTerm;
+  handleTicketIdChange(event: CustomEvent) {
+    this.searchTerm = event.detail.value;
   }
 
-  private get commands() {
-    return {
-      openConfigurationFile: `cat ${CONFIGURATION_FILE_NAME}`,
-      searchPullRequests: `gh pr list --json number,title,body,baseRefName,url,files,createdAt,state,closedAt --search "${this.searchTerm}" --state all`
-    };
+  handleSearch() {
+    this.executeSearch();
   }
 
-  private loadConfiguration() {
-    this.sendCommandToTerminal(this.commands.openConfigurationFile);
+  handleSectionToggle(event: CustomEvent) {
+    this.activeSections = event.detail.openSections;
   }
 
-  getElementIdentifier(): string {
-    return ELEMENT_IDENTIFIER;
-  }
-
-  handleExecuteResult(result: ExecuteResult): void {
-    if (result.command === this.commands.openConfigurationFile) {
+  private async loadConfiguration(): Promise<void> {
+    try {
+      this.isLoading = true;
+      const result = await this.executeCommand(COMMANDS.openConfigurationFile);
       this.handleOpenConfigurationFile(result);
-    } else if (result.command === this.commands.searchPullRequests) {
-      this.handleSearchResults(result);
+    } catch (error) {
+      this.handleError("Failed to load configuration", "Configuration Error");
+    } finally {
+      this.isLoading = false;
     }
   }
 
-  handleOpenConfigurationFile(result: ExecuteResult) {
-    this.isLoading = false;
+  private handleOpenConfigurationFile(result: ExecuteResult) {
     if (result.stdout) {
       try {
         this.configurationFileContents = JSON.parse(result.stdout);
@@ -153,15 +97,95 @@ export default class Pipeline extends CliElement {
     }
   }
 
-  handleTicketIdChange(event: CustomEvent) {
-    this.searchTerm = event.detail.value;
+  private async executeSearch(): Promise<void> {
+    try {
+      this.isLoading = true;
+      const result = await this.executeCommand(
+        COMMANDS.searchPullRequests(this.searchTerm)
+      );
+      this.handleSearchResults(result);
+    } catch (error) {
+      this.handleError("Failed to search pull requests", "Search Error");
+    } finally {
+      this.isLoading = false;
+    }
   }
 
-  handleSearch() {
-    this.sendCommandToTerminal(this.commands.searchPullRequests);
+  private sortPullRequests(pullRequests: PullRequest[]): PullRequest[] {
+    return pullRequests.sort((a, b) => {
+      // First compare by state
+      if (a.state === OPEN_PR_STATE && b.state !== OPEN_PR_STATE) {
+        return -1;
+      }
+      if (a.state !== OPEN_PR_STATE && b.state === OPEN_PR_STATE) {
+        return 1;
+      }
+      // If states are the same, sort by date (newest first)
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
   }
 
-  handleSearchResults(result: ExecuteResult) {
+  private mapPullRequest(pr: PullRequest): PullRequest {
+    return {
+      ...pr,
+      bodySectionName: `${pr.number}_body`,
+      filesSectionName: `${pr.number}_files`,
+      stateBadgeClass:
+        pr.state === OPEN_PR_STATE
+          ? "slds-badge slds-theme_success"
+          : "slds-badge"
+    };
+  }
+
+  private groupPullRequestsByBranch(pullRequests: PullRequest[]): {
+    [key: string]: PullRequest[];
+  } {
+    return pullRequests.reduce(
+      (groups: { [key: string]: PullRequest[] }, pr) => {
+        if (!groups[pr.baseRefName]) {
+          groups[pr.baseRefName] = [];
+        }
+        groups[pr.baseRefName].push(pr);
+        return groups;
+      },
+      {}
+    );
+  }
+
+  private createOrderedGroup(
+    branch: string,
+    groups: { [key: string]: PullRequest[] }
+  ): GroupedPR {
+    const branchConfig = this.configurationFileContents?.branches?.[branch];
+    return {
+      key: branch,
+      value: groups[branch] || [],
+      isOrderedBranch: true,
+      containerClass: "slds-box slds-box_x-small slds-m-bottom_medium",
+      label: branchConfig?.label || "No Salesforce Org",
+      branchIcon: "standard:environment_hub",
+      orgIcon: "utility:salesforce1"
+    };
+  }
+
+  private createUnorderedGroup(
+    branch: string,
+    groups: { [key: string]: PullRequest[] }
+  ): GroupedPR {
+    const branchConfig = this.configurationFileContents?.branches?.[branch];
+    return {
+      key: branch,
+      value: groups[branch],
+      isOrderedBranch: false,
+      containerClass:
+        "slds-box slds-box_x-small slds-m-bottom_medium slds-theme_shade slds-theme_alert-texture",
+      label: branchConfig?.label || "No Salesforce Org",
+      branchIcon: "standard:environment_hub",
+      orgIcon: "utility:salesforce1"
+    };
+  }
+
+  private handleSearchResults(result: ExecuteResult) {
     if (result.stdout) {
       try {
         const pullRequests = JSON.parse(result.stdout);
@@ -170,28 +194,9 @@ export default class Pipeline extends CliElement {
           this.pullRequests = [];
         } else {
           this.searchMessage = "";
-          // Sort PRs by state (OPEN first) and then by createdAt date
-          this.pullRequests = pullRequests
-            .sort((a: PullRequest, b: PullRequest) => {
-              // First compare by state
-              if (a.state === "OPEN" && b.state !== "OPEN") return -1;
-              if (a.state !== "OPEN" && b.state === "OPEN") return 1;
-
-              // If states are the same, sort by date (newest first)
-              return (
-                new Date(b.createdAt).getTime() -
-                new Date(a.createdAt).getTime()
-              );
-            })
-            .map((pr: PullRequest) => ({
-              ...pr,
-              bodySectionName: `${pr.number}_body`,
-              filesSectionName: `${pr.number}_files`,
-              stateBadgeClass:
-                pr.state === "OPEN"
-                  ? "slds-badge slds-theme_success"
-                  : "slds-badge"
-            }));
+          this.pullRequests = this.sortPullRequests(pullRequests).map(
+            this.mapPullRequest.bind(this)
+          );
         }
       } catch (error) {
         const errorMessage =
@@ -207,7 +212,31 @@ export default class Pipeline extends CliElement {
     Toast.show({ label: label, message: error, variant: "error" }, this);
   }
 
-  handleSectionToggle(event: CustomEvent) {
-    this.activeSections = event.detail.openSections;
+  get groupedPullRequests(): GroupedPR[] {
+    const groups = this.groupPullRequestsByBranch(this.pullRequests);
+
+    // Create ordered groups first
+    const orderedGroups = this.orderedBranches.map((branch) =>
+      this.createOrderedGroup(branch, groups)
+    );
+
+    // Find unordered branches and add them to the end
+    const unorderedBranches = Object.keys(groups).filter(
+      (branch) => !this.orderedBranches.includes(branch)
+    );
+
+    const unorderedGroups = unorderedBranches.map((branch) =>
+      this.createUnorderedGroup(branch, groups)
+    );
+
+    return [...orderedGroups, ...unorderedGroups];
+  }
+
+  get hasResults(): boolean {
+    return this.pullRequests.length > 0;
+  }
+
+  get searchIsDisabled() {
+    return !this.searchTerm;
   }
 }

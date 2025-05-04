@@ -29,7 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
       );
       panel.webview.onDidReceiveMessage(
         (message) => {
-          execute(panel, message.command, message.elementId);
+          execute(panel, message.command, message.elementId, message.requestId);
         },
         undefined,
         context.subscriptions
@@ -116,15 +116,18 @@ function getUri(
  * @param panel The webview panel.
  * @param command The command to execute.
  * @param elementId The ID of the element that initiated the command.
+ * @param requestId The unique identifier for this command request.
  */
 function execute(
   panel: vscode.WebviewPanel,
   command: string,
-  elementId?: string
+  elementId?: string,
+  requestId?: string
 ): void {
   const result: ExecuteResult = {
     command,
-    elementId
+    elementId,
+    requestId
   };
   exec(command, (error, stdout, stderr) => {
     if (error) {
@@ -146,4 +149,5 @@ interface ExecuteResult {
   stderr?: string;
   elementId?: string;
   errorCode?: number;
+  requestId?: string;
 }

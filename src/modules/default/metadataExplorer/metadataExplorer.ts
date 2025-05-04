@@ -7,7 +7,7 @@
  * integrates with a terminal component for executing CLI commands.
  */
 import { ExecuteResult } from "../app/app";
-import { track, api } from "lwc";
+import { track } from "lwc";
 import Toast from "lightning-base-components/src/lightning/toast/toast.js";
 import {
   SalesforceConnectionInfo,
@@ -30,7 +30,6 @@ import {
   convertFieldDefinitionRecordToTableRow
 } from "./table";
 import CliElement from "../cliElement/cliElement";
-const ELEMENT_IDENTIFIER = "metadataExplorer";
 const DEFAULT_TIMEZONE = "America/Los_Angeles";
 const CUSTOM_OBJECT = "CustomObject";
 const STANDARD_FIELD = "StandardField";
@@ -84,7 +83,6 @@ export default class MetadataExplorer extends CliElement {
     string,
     FieldDefinitionResponse
   >();
-  @track currentSObjectApiName?: string;
   @track processedMetadataTypes: string[] = [];
   @track folderBasedMetadataItems = new Map<
     string,
@@ -96,61 +94,37 @@ export default class MetadataExplorer extends CliElement {
    * Retrieves the org connection information.
    */
   connectedCallback(): void {
-    this.executeCommand(COMMANDS.orgDisplay);
+    this.initializeMetadataExplorer();
+  }
+
+  /**
+   * Executes a command with spinner management.
+   * @param command The command to execute.
+   * @returns A promise that resolves with the command execution result.
+   */
+  private async executeCommandWithSpinner(
+    command: string
+  ): Promise<ExecuteResult> {
+    this.spinnerMessages.add(command);
+    this.refresh();
+    try {
+      return await this.executeCommand(command);
+    } finally {
+      this.spinnerMessages.delete(command);
+      this.refresh();
+    }
+  }
+
+  private async initializeMetadataExplorer(): Promise<void> {
+    try {
+      const result = await this.executeCommandWithSpinner(COMMANDS.orgDisplay);
+      this.handleOrgDisplay(result);
+    } catch (error) {
+      this.handleError("Failed to initialize metadata explorer", "Error");
+    }
   }
 
   //  ▂▃▄▅▆▇█▓▒░ Public Methods ░▒▓█▇▆▅▄▃▂
-
-  /**
-   * Handles execute results from the terminal.
-   * Dispatches the result to the appropriate handler based on the command prefix.
-   * @param result The execution result from the terminal.
-   */
-  @api
-  handleExecuteResult(result: ExecuteResult) {
-    if (result.elementId !== ELEMENT_IDENTIFIER) {
-      return;
-    }
-
-    this.spinnerMessages.delete(result.command);
-
-    if (result.errorCode) {
-      this.handleError(result.stderr || "Unknown error", "Error");
-      return;
-    }
-
-    if (result.command.startsWith(COMMAND_PREFIX.sfOrgDisplay)) {
-      this.handleOrgDisplay(result);
-    } else if (
-      result.command.startsWith(COMMAND_PREFIX.sfOrgListMetadataTypes)
-    ) {
-      this.handleMetadataTypes(result);
-    } else if (result.command.startsWith(COMMAND_PREFIX.sfOrgListMetadata)) {
-      this.handleMetadataOfType(result);
-    } else if (
-      result.command.startsWith(COMMAND_PREFIX.sfProjectRetrieveStart)
-    ) {
-      this.handleMetadataRetrieve(result);
-    } else if (
-      result.command.startsWith(COMMAND_PREFIX.sfDataQueryFieldDefinitions)
-    ) {
-      this.handleFieldQuery(result);
-    } else if (
-      result.command.includes(COMMAND_PREFIX.sfDataQueryEmailTemplates)
-    ) {
-      this.handleFolderBasedMetadataResponse(result);
-    }
-  }
-
-  /**
-   * Returns the unique identifier for this component.
-   * This identifier is used to distinguish between different components when handling
-   * command results from the terminal.
-   * @returns {string} The element identifier.
-   */
-  getElementIdentifier() {
-    return ELEMENT_IDENTIFIER;
-  }
 
   //  ▂▃▄▅▆▇█▓▒░ Event Handlers ░▒▓█▇▆▅▄▃▂
 
@@ -159,7 +133,7 @@ export default class MetadataExplorer extends CliElement {
    * Queries and displays the standard fields for the selected custom object.
    * @param event The custom event containing the name of the custom object.
    */
-  handleToggle(event: CustomEvent) {
+  async handleToggle(event: CustomEvent) {
     const sObjectApiName = event.detail.name;
     if (
       this.selectedMetadataType?.xmlName !== CUSTOM_OBJECT ||
@@ -168,11 +142,17 @@ export default class MetadataExplorer extends CliElement {
     ) {
       return;
     }
-    this.currentSObjectApiName = sObjectApiName;
-    this.executeCommand(
-      COMMANDS.queryFieldDefinitions([`'${sObjectApiName}'`])
-    );
-    this.refresh();
+    const command = COMMANDS.queryFieldDefinitions([`'${sObjectApiName}'`]);
+    try {
+      const result = await this.executeCommandWithSpinner(command);
+      this.handleFieldQuery(result, sObjectApiName);
+      this.refresh();
+    } catch (error) {
+      this.handleError(
+        `Failed to query field definitions for ${sObjectApiName}`,
+        "Error"
+      );
+    }
   }
 
   /**
@@ -180,7 +160,7 @@ export default class MetadataExplorer extends CliElement {
    * Retrieves the metadata items for the selected type.
    * @param event The change event containing the selected metadata type value.
    */
-  handleMetadataTypeSelection(event: CustomEvent) {
+  async handleMetadataTypeSelection(event: CustomEvent) {
     this.resetMetadataItems();
     this.processedMetadataTypes = [];
     const selectedType = event.detail.value;
@@ -189,11 +169,57 @@ export default class MetadataExplorer extends CliElement {
     );
 
     if (this.selectedMetadataType) {
-      if (this.selectedMetadataType.inFolder) {
-        this.executeCommand(COMMANDS.queryFolderBasedMetadata(selectedType));
-      } else {
-        this.executeCommand(COMMANDS.listMetadataOfType(selectedType));
+      try {
+        if (this.selectedMetadataType.inFolder) {
+          await this.handleFolderBasedMetadata(selectedType);
+        } else {
+          await this.handleStandardMetadata(selectedType);
+        }
+      } catch (error) {
+        this.spinnerMessages.clear();
+        this.handleError(
+          `Failed to retrieve metadata for type ${selectedType}`,
+          "Error"
+        );
       }
+    }
+
+    this.ensureStandardFieldInChildTypes();
+  }
+
+  private async handleFolderBasedMetadata(selectedType: string): Promise<void> {
+    const command = COMMANDS.queryFolderBasedMetadata(selectedType);
+    const result = await this.executeCommandWithSpinner(command);
+    this.handleFolderBasedMetadataResponse(result);
+  }
+
+  private async handleStandardMetadata(selectedType: string): Promise<void> {
+    const command = COMMANDS.listMetadataOfType(selectedType);
+    const result = await this.executeCommandWithSpinner(command);
+    this.handleMetadataOfType(result);
+
+    if (this.selectedMetadataType?.childXmlNames) {
+      await this.handleChildMetadataTypes();
+    }
+  }
+
+  private async handleChildMetadataTypes(): Promise<void> {
+    const commands = this.selectedMetadataType!.childXmlNames.map(
+      (childMetadataType) => COMMANDS.listMetadataOfType(childMetadataType)
+    );
+    const results = await Promise.all(
+      commands.map((command) => this.executeCommandWithSpinner(command))
+    );
+    results.forEach((result) => this.handleMetadataOfType(result));
+  }
+
+  private ensureStandardFieldInChildTypes(): void {
+    if (
+      this.selectedMetadataType?.xmlName === CUSTOM_OBJECT &&
+      this.selectedMetadataType?.childXmlNames &&
+      !this.selectedMetadataType.childXmlNames.includes(STANDARD_FIELD)
+    ) {
+      this.selectedMetadataType.childXmlNames.push(STANDARD_FIELD);
     }
   }
 
@@ -220,9 +246,17 @@ export default class MetadataExplorer extends CliElement {
    * Handles the click event on the retrieve button.
    * Initiates the retrieval of selected metadata items.
    */
-  handleRetrieveClick() {
-    this.executeCommand(COMMANDS.retrieveMetadata(this.selectedMetadataRows!));
-    this.refresh();
+  async handleRetrieveClick() {
+    if (!this.selectedMetadataRows) {
+      return;
+    }
+    const command = COMMANDS.retrieveMetadata(this.selectedMetadataRows);
+    try {
+      const result = await this.executeCommandWithSpinner(command);
+      this.handleMetadataRetrieve(result);
+    } catch (error) {
+      this.handleError("Failed to retrieve metadata", "Error");
+    }
   }
 
   /**
@@ -279,41 +313,23 @@ export default class MetadataExplorer extends CliElement {
 
   //  ▂▃▄▅▆▇█▓▒░ Private Methods ░▒▓█▇▆▅▄▃▂
 
-  private executeCommand(command: string) {
-    this.spinnerMessages.add(command);
-    this.sendCommandToTerminal(command);
-  }
-
-  /**
-   * Resets the metadata items and related properties.
-   * Clears selections, results, and collapses the tree grid.
-   */
-  private resetMetadataItems() {
-    this.renderDropdownOptions = false;
-    this.selectedRows = undefined;
-    this.selectedMetadataType = undefined;
-    this.retrieveMetadataResult = undefined;
-    this.metadataItemsByType = new Map<string, ListMetadataOfTypeResponse>();
-    this.standardFieldsBySObjectApiName = new Map<
-      string,
-      FieldDefinitionResponse
-    >();
-    this.currentSObjectApiName = undefined;
-    const treeGrid = this.template!.querySelector("lightning-tree-grid");
-    if (treeGrid) {
-      (treeGrid as any).collapseAll();
-    }
-  }
-
   /**
    * Handles the result of the `sf org display` command.
    * Stores the org connection information and retrieves metadata types.
    * @param result The execution result.
    */
-  private handleOrgDisplay(result: ExecuteResult) {
+  private async handleOrgDisplay(result: ExecuteResult) {
     if (result.stdout) {
       this.orgConnectionInfo = JSON.parse(result.stdout);
-      this.executeCommand(COMMANDS.listMetadataTypes);
+      const command = COMMANDS.listMetadataTypes;
+      try {
+        const metadataTypesResult = await this.executeCommandWithSpinner(
+          command
+        );
+        this.handleMetadataTypes(metadataTypesResult);
+      } catch (error) {
+        this.handleError("Failed to fetch metadata types", "Error");
+      }
     } else if (result.stderr) {
       this.handleError(
         result.stderr,
@@ -364,6 +380,64 @@ export default class MetadataExplorer extends CliElement {
   }
 
   /**
+   * Handles the result of the `sf project retrieve start` command.
+   * Hides the spinner.
+   * @param result The execution result.
+   */
+  private handleMetadataRetrieve(result: ExecuteResult) {
+    const errorHeader = `Something went wrong when retrieving metadata`;
+    if (result.stderr) {
+      this.handleError(result.stderr, errorHeader);
+    }
+    if (result.stdout) {
+      const response: RetrieveMetadataResponse = JSON.parse(result.stdout);
+      const errorMessage = this.extractErrorMessages(response);
+      if (errorMessage.length > 0) {
+        this.handleError(errorMessage.join("\n"), errorHeader);
+      }
+    }
+    this.refresh();
+  }
+
+  /**
+   * Handles the result of the `sf data query` command for field definitions.
+   * Stores the retrieved field definitions by SObject API name.
+   * @param result The execution result.
+   */
+  private handleFieldQuery(result: ExecuteResult, sObjectApiName: string) {
+    if (result.stdout) {
+      const queryResult = JSON.parse(result.stdout);
+      this.standardFieldsBySObjectApiName.set(sObjectApiName, queryResult);
+      this.refresh();
+    } else if (result.stderr) {
+      this.handleError(
+        result.stderr,
+        `Something went wrong when querying FieldDefinition for ${sObjectApiName}`
+      );
+    }
+  }
+
+  /**
+   * Resets the metadata items and related properties.
+   * Clears selections, results, and collapses the tree grid.
+   */
+  private resetMetadataItems() {
+    this.renderDropdownOptions = false;
+    this.selectedRows = undefined;
+    this.selectedMetadataType = undefined;
+    this.retrieveMetadataResult = undefined;
+    this.metadataItemsByType = new Map<string, ListMetadataOfTypeResponse>();
+    this.standardFieldsBySObjectApiName = new Map<
+      string,
+      FieldDefinitionResponse
+    >();
+    const treeGrid = this.template!.querySelector("lightning-tree-grid");
+    if (treeGrid) {
+      (treeGrid as any).collapseAll();
+    }
+  }
+
+  /**
    * Returns a list of SObject API names.
    * @returns An array of SObject API names.
    */
@@ -394,26 +468,6 @@ export default class MetadataExplorer extends CliElement {
   }
 
   /**
-   * Handles the result of the `sf project retrieve start` command.
-   * Hides the spinner.
-   * @param result The execution result.
-   */
-  private handleMetadataRetrieve(result: ExecuteResult) {
-    const errorHeader = `Something went wrong when retrieving metadata`;
-    if (result.stderr) {
-      this.handleError(result.stderr, errorHeader);
-    }
-    if (result.stdout) {
-      const response: RetrieveMetadataResponse = JSON.parse(result.stdout);
-      const errorMessage = this.extractErrorMessages(response);
-      if (errorMessage.length > 0) {
-        this.handleError(errorMessage.join("\n"), errorHeader);
-      }
-    }
-    this.refresh();
-  }
-
-  /**
    * Extracts error messages from a RetrieveMetadataResponse.
    * Filters for files with a 'Failed' state and returns their error messages.
    * @param result The RetrieveMetadataResponse object.
@@ -423,29 +477,6 @@ export default class MetadataExplorer extends CliElement {
     return result.result.files
       .filter((file) => file.state === "Failed")
       .map((file) => file.error?.toString() ?? "");
-  }
-
-  /**
-   * Handles the result of the `sf data query` command for field definitions.
-   * Stores the retrieved field definitions by SObject API name.
-   * @param result The execution result.
-   */
-  private handleFieldQuery(result: ExecuteResult) {
-    if (result.stdout) {
-      const queryResult = JSON.parse(result.stdout);
-      this.standardFieldsBySObjectApiName.set(
-        this.currentSObjectApiName!,
-        queryResult
-      );
-      this.currentSObjectApiName = undefined;
-      this.refresh();
-    } else if (result.stderr) {
-      this.handleError(
-        result.stderr,
-        `Something went wrong when querying FieldDefinition for ${this.currentSObjectApiName}`
-      );
-      return;
-    }
   }
 
   /**
@@ -532,7 +563,6 @@ export default class MetadataExplorer extends CliElement {
     if (!this.selectedMetadataType?.childXmlNames) {
       return undefined;
     }
-
     const result: TableRow[] = this.selectedMetadataType.childXmlNames.flatMap(
       (childType) => {
         const childTypeRow = this.createChildTypeRow(metadataItem, childType);
@@ -540,17 +570,14 @@ export default class MetadataExplorer extends CliElement {
           metadataItem,
           childType
         );
-
         if (childMetadataItemRows && childMetadataItemRows.length > 0) {
           childTypeRow._children = childMetadataItemRows;
           childTypeRow.statusIcon = ICONS.complete;
           return childTypeRow;
         }
-
         return [];
       }
     );
-
     return result.length > 0 ? result : undefined;
   }
 
