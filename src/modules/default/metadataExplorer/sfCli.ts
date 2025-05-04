@@ -15,7 +15,8 @@ export const COMMAND_PREFIX = {
   sfOrgListMetadataTypes: `sf org list metadata-types ${JSON_FLAG}`,
   sfOrgListMetadata: `sf org list metadata --metadata-type`,
   sfProjectRetrieveStart: `sf project retrieve start`,
-  sfDataQueryFieldDefinitions: `sf data query --query "SELECT QualifiedApiName, LastModifiedDate, LastModifiedBy.Name, Id FROM FieldDefinition WHERE EntityDefinition.QualifiedApiName IN `
+  sfDataQueryFieldDefinitions: `sf data query --query "SELECT QualifiedApiName, LastModifiedDate, LastModifiedBy.Name, Id FROM FieldDefinition WHERE EntityDefinition.QualifiedApiName IN `,
+  sfDataQueryEmailTemplates: `sf data query --query "SELECT Id, Name, DeveloperName, NamespacePrefix, LastModifiedDate, LastModifiedBy.Name, Folder.DeveloperName, Folder.NamespacePrefix, FolderId FROM EmailTemplate"`
 };
 
 /**
@@ -60,6 +61,21 @@ export const COMMANDS = {
     return `${
       COMMAND_PREFIX.sfDataQueryFieldDefinitions
     } (${sObjectApiNames.join(", ")})" ${JSON_FLAG}`;
+  },
+  /**
+   * Generates a command to query folder-based metadata items.
+   * @param metadataType The type of folder-based metadata to query (e.g., 'EmailTemplate')
+   * @returns The CLI command string.
+   */
+  queryFolderBasedMetadata: (metadataType: string): string => {
+    switch (metadataType) {
+      case "EmailTemplate":
+        return `${COMMAND_PREFIX.sfDataQueryEmailTemplates} ${JSON_FLAG}`;
+      default:
+        throw new Error(
+          `Unsupported folder-based metadata type: ${metadataType}`
+        );
+    }
   }
 };
 
@@ -240,4 +256,30 @@ export interface FieldDefinitionRecord {
 interface User {
   Id?: string;
   Name?: string;
+}
+
+export interface FolderBasedMetadataItem {
+  Id: string;
+  Name: string;
+  DeveloperName: string;
+  NamespacePrefix?: string;
+  LastModifiedDate: string;
+  LastModifiedBy: {
+    Name: string;
+  };
+  Folder: {
+    DeveloperName: string;
+    NamespacePrefix?: string;
+  } | null;
+  FolderId: string;
+}
+
+export interface FolderBasedMetadataResponse {
+  status: number;
+  result: {
+    records: FolderBasedMetadataItem[];
+    totalSize: number;
+    done: boolean;
+  };
+  warnings: string[];
 }

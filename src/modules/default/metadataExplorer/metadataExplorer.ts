@@ -17,7 +17,9 @@ import {
   RetrieveMetadataResponse,
   FieldDefinitionResponse,
   COMMAND_PREFIX,
-  COMMANDS
+  COMMANDS,
+  FolderBasedMetadataResponse,
+  FolderBasedMetadataItem
 } from "./sfCli";
 import {
   ICONS,
@@ -27,9 +29,7 @@ import {
   convertMetadataItemToTableRow,
   convertFieldDefinitionRecordToTableRow
 } from "./table";
-import App from "../app/app";
 import CliElement from "../cliElement/cliElement";
-
 const ELEMENT_IDENTIFIER = "metadataExplorer";
 const DEFAULT_TIMEZONE = "America/Los_Angeles";
 const CUSTOM_OBJECT = "CustomObject";
@@ -86,6 +86,10 @@ export default class MetadataExplorer extends CliElement {
   >();
   @track currentSObjectApiName?: string;
   @track processedMetadataTypes: string[] = [];
+  @track folderBasedMetadataItems = new Map<
+    string,
+    FolderBasedMetadataItem[]
+  >();
 
   /**
    * Called when the component is connected to the DOM.
@@ -104,27 +108,37 @@ export default class MetadataExplorer extends CliElement {
    */
   @api
   handleExecuteResult(result: ExecuteResult) {
-    const command = result.command;
-    this.spinnerMessages.delete(command);
-    if (command.startsWith(COMMAND_PREFIX.sfOrgDisplay)) {
+    if (result.elementId !== ELEMENT_IDENTIFIER) {
+      return;
+    }
+
+    this.spinnerMessages.delete(result.command);
+
+    if (result.errorCode) {
+      this.handleError(result.stderr || "Unknown error", "Error");
+      return;
+    }
+
+    if (result.command.startsWith(COMMAND_PREFIX.sfOrgDisplay)) {
       this.handleOrgDisplay(result);
-      return;
-    }
-    if (command.startsWith(COMMAND_PREFIX.sfOrgListMetadataTypes)) {
+    } else if (
+      result.command.startsWith(COMMAND_PREFIX.sfOrgListMetadataTypes)
+    ) {
       this.handleMetadataTypes(result);
-      return;
-    }
-    if (command.startsWith(COMMAND_PREFIX.sfOrgListMetadata)) {
+    } else if (result.command.startsWith(COMMAND_PREFIX.sfOrgListMetadata)) {
       this.handleMetadataOfType(result);
-      return;
-    }
-    if (command.startsWith(COMMAND_PREFIX.sfProjectRetrieveStart)) {
+    } else if (
+      result.command.startsWith(COMMAND_PREFIX.sfProjectRetrieveStart)
+    ) {
       this.handleMetadataRetrieve(result);
-      return;
-    }
-    if (command.startsWith(COMMAND_PREFIX.sfDataQueryFieldDefinitions)) {
+    } else if (
+      result.command.startsWith(COMMAND_PREFIX.sfDataQueryFieldDefinitions)
+    ) {
       this.handleFieldQuery(result);
-      return;
+    } else if (
+      result.command.includes(COMMAND_PREFIX.sfDataQueryEmailTemplates)
+    ) {
+      this.handleFolderBasedMetadataResponse(result);
     }
   }
 
@@ -168,26 +182,18 @@ export default class MetadataExplorer extends CliElement {
    */
   handleMetadataTypeSelection(event: CustomEvent) {
     this.resetMetadataItems();
-    const selectedMetadataType = (event.target as HTMLInputElement).value;
+    this.processedMetadataTypes = [];
+    const selectedType = event.detail.value;
     this.selectedMetadataType = this.metadataTypes?.result.metadataObjects.find(
-      (metadataType) => metadataType.xmlName === selectedMetadataType
+      (type) => type.xmlName === selectedType
     );
 
-    this.executeCommand(
-      COMMANDS.listMetadataOfType(this.selectedMetadataType!.xmlName)
-    );
-    if (this.selectedMetadataType!.childXmlNames) {
-      for (const childMetadataType of this.selectedMetadataType!
-        .childXmlNames) {
-        this.executeCommand(COMMANDS.listMetadataOfType(childMetadataType));
+    if (this.selectedMetadataType) {
+      if (this.selectedMetadataType.inFolder) {
+        this.executeCommand(COMMANDS.queryFolderBasedMetadata(selectedType));
+      } else {
+        this.executeCommand(COMMANDS.listMetadataOfType(selectedType));
       }
-    }
-    if (
-      this.selectedMetadataType!.xmlName === CUSTOM_OBJECT &&
-      this.selectedMetadataType?.childXmlNames &&
-      !this.selectedMetadataType.childXmlNames.includes(STANDARD_FIELD)
-    ) {
-      this.selectedMetadataType!.childXmlNames.push(STANDARD_FIELD);
     }
   }
 
@@ -504,8 +510,8 @@ export default class MetadataExplorer extends CliElement {
     pattern = pattern.toLowerCase();
     str = str.toLowerCase();
     let patternIdx = 0;
-    for (let i = 0; i < str.length; i++) {
-      if (str[i] === pattern[patternIdx]) {
+    for (const char of str) {
+      if (char === pattern[patternIdx]) {
         patternIdx++;
       }
       if (patternIdx === pattern.length) {
@@ -680,6 +686,89 @@ export default class MetadataExplorer extends CliElement {
     if (!this.selectedMetadataType) {
       return undefined;
     }
+
+    if (this.selectedMetadataType.inFolder) {
+      const items = this.folderBasedMetadataItems.get(
+        this.selectedMetadataType.xmlName
+      );
+      if (!items) {
+        return undefined;
+      }
+
+      // Create a map of folders and their items
+      const folderMap = new Map<string, FolderBasedMetadataItem[]>();
+      const unfiledItems: FolderBasedMetadataItem[] = [];
+
+      // Group items by folder
+      items.forEach((item) => {
+        if (item.Folder) {
+          const folderName = item.Folder.DeveloperName;
+          if (!folderMap.has(folderName)) {
+            folderMap.set(folderName, []);
+          }
+          folderMap.get(folderName)!.push(item);
+        } else {
+          unfiledItems.push(item);
+        }
+      });
+
+      // Create the root metadata type row
+      const rootRow: TableRow = {
+        id: this.selectedMetadataType.xmlName,
+        label: this.selectedMetadataType.xmlName,
+        metadataType: this.selectedMetadataType.xmlName,
+        type: this.selectedMetadataType.xmlName,
+        statusIcon: ICONS.complete,
+        _children: []
+      };
+
+      // Add folder rows with their items as children
+      for (const [folderName, folderItems] of folderMap) {
+        const folderRow: TableRow = {
+          id: `folder_${folderName}`,
+          label: folderName,
+          metadataType: "Folder",
+          type: this.selectedMetadataType.xmlName,
+          statusIcon: ICONS.complete,
+          _children: folderItems.map((item) =>
+            this.convertFolderBasedMetadataItemToTableRow(
+              item,
+              this.selectedMetadataType!.xmlName
+            )
+          )
+        };
+        rootRow._children!.push(folderRow);
+      }
+
+      // Add unfiled items under a special folder
+      if (unfiledItems.length > 0) {
+        const unfiledFolderRow: TableRow = {
+          id: "folder_unfiled",
+          label: "Unfiled Public Classic Email Templates",
+          metadataType: "Folder",
+          type: this.selectedMetadataType.xmlName,
+          statusIcon: ICONS.complete,
+          _children: unfiledItems.map((item) =>
+            this.convertFolderBasedMetadataItemToTableRow(
+              item,
+              this.selectedMetadataType!.xmlName
+            )
+          )
+        };
+        rootRow._children!.push(unfiledFolderRow);
+      }
+
+      // Sort folders alphabetically
+      rootRow._children!.sort((a, b) => {
+        // Put "Unfiled Public Classic Email Templates" at the end
+        if (a.label === "Unfiled Public Classic Email Templates") return 1;
+        if (b.label === "Unfiled Public Classic Email Templates") return -1;
+        return a.label!.localeCompare(b.label!);
+      });
+
+      return [rootRow];
+    }
+
     const metadataItems = this.metadataItemsByType.get(
       this.selectedMetadataType.xmlName
     );
@@ -740,5 +829,59 @@ export default class MetadataExplorer extends CliElement {
       return undefined;
     }
     return this.isDebugMode ? Array.from(this.spinnerMessages) : [];
+  }
+
+  private handleFolderBasedMetadataResponse(result: ExecuteResult) {
+    if (!result.stdout) {
+      this.handleError("No output received from the command", "Error");
+      return;
+    }
+
+    try {
+      const response = JSON.parse(result.stdout) as FolderBasedMetadataResponse;
+      if (response.status === 0) {
+        const metadataType = this.selectedMetadataType?.xmlName;
+        if (metadataType) {
+          this.folderBasedMetadataItems.set(
+            metadataType,
+            response.result.records
+          );
+          this.refresh();
+        }
+      } else {
+        this.handleError(
+          `Failed to retrieve folder-based metadata: ${
+            response.warnings?.join(", ") || "Unknown error"
+          }`,
+          "Error"
+        );
+      }
+    } catch (error) {
+      this.handleError(
+        `Failed to parse folder-based metadata response: ${error}`,
+        "Error"
+      );
+    }
+  }
+
+  private convertFolderBasedMetadataItemToTableRow(
+    item: FolderBasedMetadataItem,
+    metadataType: string
+  ): TableRow {
+    const fullName = item.Folder
+      ? `${item.Folder.DeveloperName}/${item.DeveloperName}`
+      : `unfiled\\$public/${item.DeveloperName}`;
+
+    return {
+      id: item.Id,
+      label: item.Name,
+      fullName: fullName,
+      metadataType: metadataType,
+      type: metadataType,
+      lastModifiedByName: item.LastModifiedBy?.Name,
+      lastModifiedDate: item.LastModifiedDate,
+      statusIcon: ICONS.complete,
+      _children: undefined
+    };
   }
 }
