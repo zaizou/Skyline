@@ -2,8 +2,9 @@
   "name": "skyline-devops",
   "displayName": "Skyline DevOps",
   "description": "A Salesforce DevOps Tool",
+  "icon": "images/Skyline_logo.png",
   "publisher": "mitchspano",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "engines": {
     "vscode": "^1.95.0"
   },
@@ -69,5 +70,10 @@
     "@types/uuid": "^10.0.0",
     "lightning-base-components": "^1.22.1-alpha",
     "uuid": "^11.1.0"
-  }
+  },
+  "keywords": [
+    "salesforce",
+    "devops",
+    "development"
+  ]
 }
