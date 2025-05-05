@@ -1,0 +1,32 @@
+<template>
+  <li class="slds-item">
+    <div class="slds-grid slds-gutters">
+      <div class="slds-col">
+        <div class="slds-text-heading_small">{org.alias}</div>
+        <div class="slds-text-body_small">{org.username}</div>
+        <template if:true={showExpiration}>
+          <div class="slds-text-body_small">Expires: {org.expirationDate}</div>
+        </template>
+      </div>
+      <div class="slds-col slds-no-flex">
+        <lightning-button
+          label="Open"
+          variant="brand"
+          onclick={handleOpenOrg}
+          data-alias={org.alias}
+          disabled={isLoading}
+          class="slds-m-right_small"
+        >
+        </lightning-button>
+        <lightning-button
+          label="Remove"
+          variant="destructive"
+          onclick={handleRemoveOrg}
+          data-alias={org.alias}
+          disabled={isLoading}
+        >
+        </lightning-button>
+      </div>
+    </div>
+  </li>
+</template>

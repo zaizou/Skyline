@@ -1,0 +1,141 @@
+<template>
+  <div class="slds-p-around_medium slds-text-color_default">
+    <lightning-card title="Org Manager">
+      <lightning-button
+        label="Authenticate New Org"
+        variant="brand"
+        onclick={handleAuthOrg}
+        disabled={isLoading}
+        slot="actions"
+      >
+      </lightning-button>
+
+      <template if:true={error}>
+        <div
+          class="slds-notify slds-notify_alert slds-alert_error"
+          role="alert"
+        >
+          <span class="slds-assistive-text">error</span>
+          <h2>{error}</h2>
+        </div>
+      </template>
+
+      <template if:true={isLoading}>
+        <div class="slds-is-relative">
+          <lightning-spinner
+            alternative-text="Loading"
+            size="large"
+          ></lightning-spinner>
+        </div>
+      </template>
+      <template if:true={hasOrgs}>
+        <div class="slds-box slds-m-around_medium">
+          <template if:true={devHubs.length}>
+            <div class="slds-text-heading_medium slds-p-bottom_medium">
+              Dev Hubs
+            </div>
+            <ul class="slds-has-dividers_bottom-space">
+              <template for:each={devHubs} for:item="org">
+                <default-org-list-item
+                  key={org.alias}
+                  org={org}
+                  is-loading={isLoading}
+                  onremoveorg={handleRemoveOrg}
+                  onopenorg={handleOpenOrg}
+                ></default-org-list-item>
+              </template>
+            </ul>
+          </template>
+
+          <template if:true={scratchOrgs.length}>
+            <div
+              class="slds-text-heading_medium slds-p-bottom_medium slds-p-top_medium"
+            >
+              Scratch Orgs
+            </div>
+            <ul class="slds-has-dividers_bottom-space">
+              <template for:each={scratchOrgs} for:item="org">
+                <default-org-list-item
+                  key={org.alias}
+                  org={org}
+                  is-loading={isLoading}
+                  show-expiration="true"
+                  onremoveorg={handleRemoveOrg}
+                  onopenorg={handleOpenOrg}
+                ></default-org-list-item>
+              </template>
+            </ul>
+          </template>
+
+          <template if:true={sandboxes.length}>
+            <div
+              class="slds-text-heading_medium slds-p-bottom_medium slds-p-top_medium"
+            >
+              Sandboxes
+            </div>
+            <ul class="slds-has-dividers_bottom-space">
+              <template for:each={sandboxes} for:item="org">
+                <default-org-list-item
+                  key={org.alias}
+                  org={org}
+                  is-loading={isLoading}
+                  onremoveorg={handleRemoveOrg}
+                  onopenorg={handleOpenOrg}
+                ></default-org-list-item>
+              </template>
+            </ul>
+          </template>
+
+          <template if:true={nonScratchOrgs.length}>
+            <div
+              class="slds-text-heading_medium slds-p-bottom_medium slds-p-top_medium"
+            >
+              Non-Scratch Orgs
+            </div>
+            <ul class="slds-has-dividers_bottom-space">
+              <template for:each={nonScratchOrgs} for:item="org">
+                <default-org-list-item
+                  key={org.alias}
+                  org={org}
+                  is-loading={isLoading}
+                  onremoveorg={handleRemoveOrg}
+                  onopenorg={handleOpenOrg}
+                ></default-org-list-item>
+              </template>
+            </ul>
+          </template>
+
+          <template if:true={otherOrgs.length}>
+            <div
+              class="slds-text-heading_medium slds-p-bottom_medium slds-p-top_medium"
+            >
+              Other Orgs
+            </div>
+            <ul class="slds-has-dividers_bottom-space">
+              <template for:each={otherOrgs} for:item="org">
+                <default-org-list-item
+                  key={org.alias}
+                  org={org}
+                  is-loading={isLoading}
+                  onremoveorg={handleRemoveOrg}
+                  onopenorg={handleOpenOrg}
+                ></default-org-list-item>
+              </template>
+            </ul>
+          </template>
+        </div>
+      </template>
+
+      <template if:false={isLoading}>
+        <template if:false={hasOrgs}>
+          <div class="slds-text-align_center slds-p-around_large">
+            <p class="slds-text-heading_medium">No authenticated orgs found</p>
+            <p class="slds-text-body_regular">
+              Click the "Authenticate New Org" button to add your first org
+            </p>
+          </div>
+        </template>
+      </template>
+    </lightning-card>
+  </div>
+</template>

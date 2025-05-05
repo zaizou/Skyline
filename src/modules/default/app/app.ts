@@ -22,6 +22,7 @@ declare global {
  */
 export enum Pages {
   home = "Home",
+  orgManager = "Org Manager",
   repoConfig = "Project Configuration",
   metadataExplorer = "Metadata Explorer",
   pipeline = "Pipeline"
@@ -164,5 +165,9 @@ export default class App extends LightningElement {
 
   get showPipeline() {
     return this.currentPage === Pages.pipeline;
+  }
+
+  get showOrgManager() {
+    return this.currentPage === Pages.orgManager;
   }
 }

@@ -1,0 +1,10 @@
+.slds-item {
+  padding: 1rem;
+}
+
+.slds-is-relative {
+  min-height: 200px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
