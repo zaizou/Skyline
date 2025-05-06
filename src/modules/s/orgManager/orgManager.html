@@ -36,13 +36,13 @@
             </div>
             <ul class="slds-has-dividers_bottom-space">
               <template for:each={devHubs} for:item="org">
-                <default-org-list-item
+                <s-org-list-item
                   key={org.alias}
                   org={org}
                   is-loading={isLoading}
                   onremoveorg={handleRemoveOrg}
                   onopenorg={handleOpenOrg}
-                ></default-org-list-item>
+                ></s-org-list-item>
               </template>
             </ul>
           </template>
@@ -55,14 +55,14 @@
             </div>
             <ul class="slds-has-dividers_bottom-space">
               <template for:each={scratchOrgs} for:item="org">
-                <default-org-list-item
+                <s-org-list-item
                   key={org.alias}
                   org={org}
                   is-loading={isLoading}
                   show-expiration="true"
                   onremoveorg={handleRemoveOrg}
                   onopenorg={handleOpenOrg}
-                ></default-org-list-item>
+                ></s-org-list-item>
               </template>
             </ul>
           </template>
@@ -75,13 +75,13 @@
             </div>
             <ul class="slds-has-dividers_bottom-space">
               <template for:each={sandboxes} for:item="org">
-                <default-org-list-item
+                <s-org-list-item
                   key={org.alias}
                   org={org}
                   is-loading={isLoading}
                   onremoveorg={handleRemoveOrg}
                   onopenorg={handleOpenOrg}
-                ></default-org-list-item>
+                ></s-org-list-item>
               </template>
             </ul>
           </template>
@@ -94,13 +94,13 @@
             </div>
             <ul class="slds-has-dividers_bottom-space">
               <template for:each={nonScratchOrgs} for:item="org">
-                <default-org-list-item
+                <s-org-list-item
                   key={org.alias}
                   org={org}
                   is-loading={isLoading}
                   onremoveorg={handleRemoveOrg}
                   onopenorg={handleOpenOrg}
-                ></default-org-list-item>
+                ></s-org-list-item>
               </template>
             </ul>
           </template>
@@ -113,13 +113,13 @@
             </div>
             <ul class="slds-has-dividers_bottom-space">
               <template for:each={otherOrgs} for:item="org">
-                <default-org-list-item
+                <s-org-list-item
                   key={org.alias}
                   org={org}
                   is-loading={isLoading}
                   onremoveorg={handleRemoveOrg}
                   onopenorg={handleOpenOrg}
-                ></default-org-list-item>
+                ></s-org-list-item>
               </template>
             </ul>
           </template>

@@ -1,25 +1,25 @@
 <template>
   <div class="container">
-    <default-header
+    <s-header
       onpagenavigation={handlePageNavigation}
       current-page={currentPage}
-    ></default-header>
+    ></s-header>
     <template lwc:if={showHome}>
-      <default-home data-handler="home"></default-home>
+      <s-home data-handler="home"></s-home>
     </template>
     <template lwc:if={showRepoConfig}>
-      <default-repo-config data-handler="repoConfig"></default-repo-config>
+      <s-repo-config data-handler="repoConfig"></s-repo-config>
     </template>
     <template lwc:if={showMetadataExplorer}>
-      <default-metadata-explorer
+      <s-metadata-explorer
         data-handler="metadataExplorer"
-      ></default-metadata-explorer>
+      ></s-metadata-explorer>
     </template>
     <template lwc:if={showPipeline}>
-      <default-pipeline data-handler="pipeline"></default-pipeline>
+      <s-pipeline data-handler="pipeline"></s-pipeline>
     </template>
     <template lwc:if={showOrgManager}>
-      <default-org-manager data-handler="orgManager"></default-org-manager>
+      <s-org-manager data-handler="orgManager"></s-org-manager>
     </template>
   </div>
 </template>

@@ -366,11 +366,11 @@
   </div>
 
   <template if:true={showNewBranchModal}>
-    <default-branch-modal
+    <s-branch-modal
       available-branches={availableBranches}
       existing-branches={existingBranches}
       oncancel={handleModalCancel}
       onsave={handleAddNewBranch}
-    ></default-branch-modal>
+    ></s-branch-modal>
   </template>
 </template>

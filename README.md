@@ -112,7 +112,7 @@ src/
 ├── extension.ts          # VS Code extension entry point
 ├── index.ts             # LWC application entry point
 ├── modules/             # LWC components
-│   └── default/
+│   └── s/
 │       ├── app/         # Main application component
 │       ├── home/        # Home dashboard
 │       ├── metadataExplorer/  # Metadata browser
