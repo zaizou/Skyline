@@ -4,7 +4,7 @@
   "description": "A Salesforce DevOps Tool",
   "icon": "images/Skyline_logo.png",
   "publisher": "mitchspano",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "repository": {
     "type": "git",
     "url": "https://github.com/mitchspano/skyline"
@@ -45,7 +45,8 @@
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
-    "prepare-templates": "node scripts/prepare-templates.js"
+    "prepare-templates": "node scripts/prepare-templates.js",
+    "format": "prettier --write . --ignore-path .gitignore"
   },
   "devDependencies": {
     "@babel/plugin-syntax-decorators": "^7.25.9",
