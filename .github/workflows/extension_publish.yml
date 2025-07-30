@@ -45,6 +45,7 @@ jobs:
       - name: Publish to VS Code Marketplace
         if: steps.version_check.outputs.changed == 'true'
         working-directory: ./extension
+        continue-on-error: true
         run: |
           npm install -g @vscode/vsce
           vsce publish -p ${{ secrets.VSCE_TOKEN }}
@@ -52,6 +53,7 @@ jobs:
       - name: Publish to Open VSX
         if: steps.version_check.outputs.changed == 'true'
         working-directory: ./extension
+        continue-on-error: true
         run: |
           npm install -g ovsx
           ovsx publish -p ${{ secrets.OPEN_VSX_TOKEN }}
